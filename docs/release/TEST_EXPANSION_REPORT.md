@@ -50,8 +50,9 @@ The added tests cover:
 ## New Test Count
 
 ```text
-175 tests collected
-175 passed
+mixed root:        176 passed
+public staging:    169 passed
+enterprise staging:  7 passed
 ```
 
 ## Commands Run
@@ -93,4 +94,4 @@ Still not covered:
 
 The test target of 120+ meaningful tests has been exceeded.
 
-Testing is stronger, but public release remains blocked by repository split, live action validation, artifact integrity, and initial commit/remote readiness.
+Testing is stronger. Public/private staging now validates independently, but public release remains blocked by live action validation and release artifact integrity.

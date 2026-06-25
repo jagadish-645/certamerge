@@ -4,9 +4,9 @@
 
 CertaMerge has advanced from controlled alpha toward public-release-candidate quality.
 
-The community product is now more credible: public docs are stronger, package metadata is improved, the GitHub Action install path is corrected, release trust plans exist, CAR integrity language is honest, and the test suite expanded from 100 to 175 passing tests.
+The community product is now more credible: public docs are stronger, package metadata is improved, the GitHub Action install path is corrected, release trust plans exist, CAR integrity language is honest, public/private staging exists, and the test suite expanded beyond the 120-test target.
 
-However, public release candidate is not fully ready because the current workspace is not yet split between the public `certamerge` repo and private `certamerge_enterprise` repo, no initial commit exists, live GitHub Action validation has not run, and release artifact integrity is planned but not implemented.
+However, public release candidate is not fully ready because live GitHub Action validation has not run and release artifact integrity is planned but not implemented.
 
 ## 2. Repository Isolation Status
 
@@ -20,13 +20,12 @@ C:/Users/Jagadish/Desktop/CertaMerge
 
 The repo is independent from the parent Git root.
 
-Remaining blockers:
+Mixed root blockers:
 
-- no initial commit;
-- all files currently untracked;
-- no remote configured;
+- the mixed root workspace remains uncommitted;
+- the mixed root workspace still contains public, private, architecture, agent-system, and strategy material;
 - parent repo may still see `Desktop/CertaMerge/` as an untracked nested repo;
-- public/private split not executed.
+- the mixed root should not be pushed to the public repository.
 
 GitHub targets were verified:
 
@@ -35,7 +34,16 @@ https://github.com/jagadish-645/certamerge              public
 https://github.com/jagadish-645/certamerge_enterprise   private
 ```
 
-No remote was configured because this mixed workspace is not public-safe yet.
+No remote was configured on the mixed root because this workspace is not public-safe as a whole.
+
+Clean staging repos now exist:
+
+```text
+.tmp/public-staging
+.tmp/enterprise-staging
+```
+
+They are locally committed and configured with the verified GitHub remotes.
 
 Report:
 
@@ -61,13 +69,13 @@ python -m certamerge explain-car .tmp/payment.car.json
 
 Package metadata was hardened with readme, license, author, keywords, and alpha classifiers.
 
-Public package blocker:
+Mixed-root package blocker:
 
 ```text
 pyproject.toml currently includes the enterprise alpha package and certamerge-enterprise entry point.
 ```
 
-The public repository must split or remove enterprise packaging before publication.
+The public staging repository has a public-only `pyproject.toml` and does not include the enterprise entry point.
 
 ## 4. README And Docs Status
 
@@ -126,7 +134,7 @@ docs/release/GITHUB_ACTION_LIVE_VALIDATION_CHECKLIST.md
 Remaining blocker:
 
 ```text
-No live GitHub Actions run has been performed in a clean test repository.
+No live GitHub Actions run has been performed from the pushed public repository.
 ```
 
 ## 6. CAR Integrity And Signing Status
@@ -179,10 +187,10 @@ Remaining blockers:
 
 ## 8. Test Count And Results
 
-Current verified result:
+Current mixed-root verified result:
 
 ```text
-175 passed
+176 passed
 ```
 
 Commands:
@@ -193,6 +201,13 @@ python -m pytest -q
 ```
 
 The target of 120+ meaningful tests was exceeded.
+
+Split validation results:
+
+```text
+public staging: 169 passed
+enterprise staging: 7 passed
+```
 
 ## 9. Commands Verified
 
@@ -245,9 +260,7 @@ docs/release/PUBLIC_ALPHA_GO_NO_GO.md
 
 ## 12. Known Limitations
 
-- Public/private repo split not executed.
-- No initial commit.
-- No remote configured.
+- Public/private repo split is locally staged but not live-validated after push.
 - GitHub Action live validation not run.
 - Release artifact integrity not implemented.
 - CAR cryptographic signing not implemented.
@@ -256,16 +269,15 @@ docs/release/PUBLIC_ALPHA_GO_NO_GO.md
 
 ## 13. Exact Next Founder Actions
 
-1. Approve public/private repo split execution.
-2. Approve initial commit creation.
-3. Confirm GitHub owner and remote URLs for `certamerge` and `certamerge_enterprise`.
-4. Decide whether the live GitHub Action checklist must pass before public push.
-5. Decide minimum artifact integrity requirement for public alpha.
+1. Push validated public staging to `jagadish-645/certamerge`.
+2. Push validated enterprise staging to `jagadish-645/certamerge_enterprise`.
+3. Run live GitHub Action validation from the public repository.
+4. Decide minimum artifact integrity requirement for public alpha.
 
 ## 14. Exact Next Codex Goal
 
-Create clean public and private staging trees from the current workspace, remove enterprise/private material from the public tree, run public-only install/tests, then commit and configure remotes only after explicit permission.
+Push the validated staging repositories, observe GitHub CI, run the live GitHub Action checklist, and implement minimum SBOM/checksum release integrity.
 
 ## Final Verdict
 
-CERTAMERGE PUBLIC RELEASE CANDIDATE NOT READY — missing: public/private repo split execution, initial commit, remote configuration, live GitHub Action validation, public-only package split, release SBOM/checksum/signing implementation
+CERTAMERGE PUBLIC RELEASE CANDIDATE NOT READY — missing: live GitHub Action validation, release SBOM/checksum/signing implementation, production-grade CAR cryptographic signing

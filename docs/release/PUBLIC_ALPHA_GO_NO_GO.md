@@ -6,20 +6,20 @@
 NO-GO
 ```
 
-CertaMerge is stronger than controlled alpha, but public alpha release is blocked until repository split, commit/remote readiness, live action validation, and release artifact integrity are completed.
+CertaMerge is stronger than controlled alpha. Clean public and private staging repositories now exist, but public alpha release is still blocked until live GitHub Action validation and release artifact integrity are completed.
 
 ## Gate Checklist
 
 | Gate | Status | Evidence |
 |---|---|---|
 | Repo is isolated | Pass | Git root resolves to `C:/Users/Jagadish/Desktop/CertaMerge`. |
-| Repo is clean | Fail | No initial commit; files are untracked. |
-| Public/private split is applied | Fail | Split plan exists but current workspace still contains community and enterprise material. |
+| Repo is clean | Partial | Staging repos are clean after local commits; mixed root remains uncommitted. |
+| Public/private split is applied | Partial | Clean public and private staging trees exist under `.tmp`; mixed root remains uncommitted. |
 | GitHub target repos exist | Pass | `jagadish-645/certamerge` is public; `jagadish-645/certamerge_enterprise` is private. |
 | Install works | Pass | Clean editable install was verified. |
 | CLI works | Pass | `python -m certamerge --help`, Recover, Gate, verify, explain verified. |
 | Sample flows work | Pass | Recover no-CI sample and Gate payment sample verified. |
-| Tests pass | Pass | `175 passed`. |
+| Tests pass | Pass | Mixed root tests pass; public staging and enterprise staging tests pass independently. |
 | GitHub Action static validation | Pass | Tests and CI validate metadata/action contract. |
 | GitHub Action live validation | Fail | Checklist exists, live run not performed. |
 | README is strong | Pass | README answers the 15 first-30-second questions. |
@@ -43,25 +43,21 @@ CertaMerge is stronger than controlled alpha, but public alpha release is blocke
 
 ## Public Alpha Blockers
 
-1. Current repo has no initial commit and all files are untracked.
-2. Current workspace contains private enterprise material.
-3. Public/private repo split is designed but not executed.
-4. GitHub Action has not been live-run in a clean GitHub repository.
-5. Release artifacts are not built with checksums, SBOM, or signing.
-6. Public package metadata still includes enterprise entry point in the full workspace.
-7. Remote intentionally not configured because the current workspace is not public-safe yet.
+1. Mixed root workspace remains uncommitted and contains both public and private material.
+2. GitHub Action has not been live-run in a clean GitHub repository.
+3. Release artifacts are not built with checksums, SBOM, or signing.
+4. CAR cryptographic signing remains deferred.
 
 ## Founder Actions Required
 
-1. Approve the public/private split execution.
-2. Approve initial commit creation.
-3. Provide or confirm GitHub owner/remote URLs.
-4. Decide whether live GitHub Action validation happens before or immediately after first push.
-5. Decide minimum release artifact integrity bar for public alpha.
+1. Push validated public staging to `jagadish-645/certamerge`.
+2. Push validated enterprise staging to `jagadish-645/certamerge_enterprise`.
+3. Run live GitHub Action validation from the public repository.
+4. Decide minimum release artifact integrity bar for public alpha.
 
 ## Codex Next Goal
 
-Prepare public and private repository staging trees, run public-only validation, then commit and configure remotes only after explicit permission.
+Push validated staging repositories, observe GitHub CI, run the live GitHub Action validation checklist, and implement minimum release artifact integrity.
 
 ## Final Gate
 

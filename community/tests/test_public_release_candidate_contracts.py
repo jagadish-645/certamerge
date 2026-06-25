@@ -115,6 +115,7 @@ def test_github_action_metadata_outputs_are_release_candidate_ready(output_name:
 @pytest.mark.parametrize(
     "required_ci_fragment",
     [
+        "python -m pip install pytest",
         "python -m certamerge recover samples/repos/no-ci-vibe-repo",
         "python -m certamerge gate --repo samples/repos/payment-change-with-tests --policy samples/policies/payment.certamerge.yml --output .tmp/payment.car.json",
         "python -m certamerge verify-car .tmp/payment.car.json",
@@ -150,7 +151,7 @@ def test_release_candidate_foundation_reports_exist(required_path: str) -> None:
         "must not be pushed wholesale",
         "community-safe assets only",
         "Private assets",
-        "public/private split is designed but not executed",
+        "public/private split is designed and locally staged",
     ],
 )
 def test_public_private_split_plan_prevents_enterprise_leakage(required_phrase: str) -> None:

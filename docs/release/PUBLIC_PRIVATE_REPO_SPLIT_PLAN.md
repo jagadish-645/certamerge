@@ -34,6 +34,7 @@ Allowed public assets:
 - `CONTRIBUTING.md`
 - `SECURITY.md`
 - `.gitignore`
+- `.gitattributes`
 - `.certamerge.yml`
 - `.github/workflows/ci.yml`
 - `pyproject.toml` after enterprise package/script removal or public-only packaging split
@@ -86,10 +87,17 @@ These should not be pushed to the public repository without an explicit publicat
 4. Run public-only install and tests from the staging surface.
 5. Confirm public docs contain no enterprise-private files and contain community-safe assets only.
 6. Configure public remote only after the public tree is clean.
-7. Push only after an explicit founder instruction to publish.
+7. Push only after the staged tree has passed validation.
 
 ## Current Verdict
 
-public/private split is designed but not executed.
+public/private split is designed and locally staged.
 
-Public launch remains blocked until the split is applied and verified.
+Local staging has been validated under:
+
+```text
+.tmp/public-staging
+.tmp/enterprise-staging
+```
+
+Public launch remains blocked until the staged repositories are pushed, live GitHub Action validation passes, and release artifact integrity work is completed.
