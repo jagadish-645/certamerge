@@ -50,8 +50,8 @@ The added tests cover:
 ## New Test Count
 
 ```text
-mixed root:        176 passed
-public staging:    169 passed
+mixed root:        179 passed
+public staging:    172 passed
 enterprise staging:  7 passed
 ```
 

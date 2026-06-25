@@ -2,9 +2,9 @@
 
 ## Current Status
 
-The CertaMerge GitHub Action is statically validated for public-alpha release-candidate review.
+The CertaMerge GitHub Action is statically validated and has a built-in live validation workflow for public-alpha release-candidate review.
 
-Live validation in a clean GitHub repository has not been performed in this local run.
+Live validation is performed by the public repository workflow after push.
 
 ## Action File
 
@@ -21,7 +21,7 @@ The action must:
 - use the policy path passed through `policy`;
 - write a CAR to the path passed through `output`;
 - emit a `verdict` output from the generated CAR;
-- upload the CAR artifact;
+- upload the CAR artifact using the configured artifact name;
 - append a workflow summary;
 - default to non-blocking behavior with `fail-on-block: "false"`;
 - fail only when `fail-on-block: "true"` and the verdict is blocking;
@@ -35,6 +35,7 @@ The action must:
 | `repo` | `.` | Repository path to evaluate. |
 | `output` | `certamerge-car.json` | CAR output path. |
 | `fail-on-block` | `"false"` | Whether blocking verdicts should fail the job. |
+| `artifact-name` | `certamerge-car` | Artifact name for the uploaded CAR. |
 
 ## Outputs
 
@@ -53,6 +54,7 @@ The local test suite and CI workflow validate:
 - required outputs exist;
 - action install command uses `$GITHUB_ACTION_PATH/../..`;
 - artifact upload step uses `actions/upload-artifact@v4`;
+- artifact name can be customized to avoid collisions in multi-job validation workflows;
 - summary step writes to `GITHUB_STEP_SUMMARY`;
 - blocking state list includes `OBSERVE_ONLY_WOULD_BLOCK`;
 - default behavior is non-blocking.
@@ -78,6 +80,7 @@ jobs:
           policy: .certamerge.yml
           repo: .
           output: certamerge-car.json
+          artifact-name: certamerge-car
           fail-on-block: "false"
 ```
 
@@ -85,7 +88,21 @@ Replace `OWNER` with the actual GitHub owner after the public repository is prep
 
 ## Live Validation Requirement
 
-Before public launch, run the live checklist in:
+The public repository includes:
+
+```text
+.github/workflows/certamerge-action-validation.yml
+```
+
+This workflow validates:
+
+- allow path;
+- observe would-block path;
+- configured block path;
+- CAR artifact upload with unique artifact names;
+- generated CAR verification.
+
+Before public launch, also run the founder-facing checklist in:
 
 ```text
 docs/release/GITHUB_ACTION_LIVE_VALIDATION_CHECKLIST.md

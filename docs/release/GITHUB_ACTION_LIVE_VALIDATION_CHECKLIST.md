@@ -32,6 +32,7 @@ jobs:
           policy: .certamerge.yml
           repo: .
           output: certamerge-car.json
+          artifact-name: certamerge-car
           fail-on-block: "false"
 ```
 
@@ -69,6 +70,16 @@ python -m certamerge explain-car certamerge-car.json
 2. Re-run the needs-evidence PR workflow.
 3. Confirm the job fails only because CertaMerge emitted a blocking verdict.
 4. Confirm the CAR artifact still uploads.
+
+## Built-In Repository Validation Workflow
+
+The public CertaMerge repository also contains:
+
+```text
+.github/workflows/certamerge-action-validation.yml
+```
+
+This workflow should pass on `main` before public release. It validates allow, observe would-block, and configured-block behavior using unique CAR artifact names.
 
 ## Artifact And Log Review
 

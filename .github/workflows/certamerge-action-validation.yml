@@ -1,0 +1,69 @@
+name: CertaMerge Action Live Validation
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  allow-path:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Run CertaMerge allow path
+        id: certamerge
+        uses: ./community/github-action
+        with:
+          policy: samples/policies/payment.certamerge.yml
+          repo: samples/repos/payment-change-with-tests
+          output: .tmp/action-payment.car.json
+          artifact-name: certamerge-allow-car
+          fail-on-block: "true"
+      - name: Assert allow verdict
+        run: test "${{ steps.certamerge.outputs.verdict }}" = "ALLOW"
+      - name: Verify allow CAR
+        run: python -m certamerge verify-car .tmp/action-payment.car.json
+
+  observe-would-block-path:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Run CertaMerge observe would-block path
+        id: certamerge
+        uses: ./community/github-action
+        with:
+          policy: samples/policies/auth.certamerge.yml
+          repo: samples/repos/auth-change-missing-tests
+          output: .tmp/action-auth-observe.car.json
+          artifact-name: certamerge-observe-car
+          fail-on-block: "false"
+      - name: Assert observe would-block verdict
+        run: test "${{ steps.certamerge.outputs.verdict }}" = "OBSERVE_ONLY_WOULD_BLOCK"
+      - name: Verify observe CAR
+        run: python -m certamerge verify-car .tmp/action-auth-observe.car.json
+
+  configured-block-path:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Run CertaMerge configured block path
+        id: certamerge
+        uses: ./community/github-action
+        continue-on-error: true
+        with:
+          policy: samples/policies/auth.certamerge.yml
+          repo: samples/repos/auth-change-missing-tests
+          output: .tmp/action-auth-block.car.json
+          artifact-name: certamerge-configured-block-car
+          fail-on-block: "true"
+      - name: Assert configured block fails
+        run: test "${{ steps.certamerge.outcome }}" = "failure"
+      - name: Verify configured block CAR
+        run: python -m certamerge verify-car .tmp/action-auth-block.car.json

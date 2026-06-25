@@ -190,7 +190,7 @@ Remaining blockers:
 Current mixed-root verified result:
 
 ```text
-176 passed
+179 passed
 ```
 
 Commands:
@@ -205,7 +205,7 @@ The target of 120+ meaningful tests was exceeded.
 Split validation results:
 
 ```text
-public staging: 169 passed
+public staging: 172 passed
 enterprise staging: 7 passed
 ```
 

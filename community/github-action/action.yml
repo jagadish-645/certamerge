@@ -17,6 +17,10 @@ inputs:
     description: Fail the job when CertaMerge emits BLOCK, HARD_BLOCK, SOFT_BLOCK, REPAIR_REQUIRED, or NEEDS_EVIDENCE.
     required: false
     default: "false"
+  artifact-name:
+    description: Name for the uploaded CAR artifact.
+    required: false
+    default: certamerge-car
 outputs:
   car-path:
     description: Path to the generated Change Authorization Record.
@@ -58,13 +62,13 @@ runs:
             echo "CertaMerge did not produce a summary. Check the prior action step logs."
           fi
           echo
-          echo "CAR artifact: certamerge-car"
+          echo "CAR artifact: ${{ inputs.artifact-name }}"
         } >> "$GITHUB_STEP_SUMMARY"
     - name: Upload CertaMerge CAR
       uses: actions/upload-artifact@v4
       if: always()
       with:
-        name: certamerge-car
+        name: ${{ inputs.artifact-name }}
         path: ${{ inputs.output }}
     - name: Fail on blocking verdict when configured
       if: ${{ inputs.fail-on-block == 'true' }}

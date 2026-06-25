@@ -240,7 +240,7 @@ def test_conflicting_owner_approval_golden_fixtures_exist() -> None:
     assert json.loads(denied.read_text(encoding="utf-8"))["decision"] == "denied"
 
 
-@pytest.mark.parametrize("input_name", ["policy", "repo", "output", "fail-on-block"])
+@pytest.mark.parametrize("input_name", ["policy", "repo", "output", "fail-on-block", "artifact-name"])
 def test_github_action_declares_required_inputs(input_name: str) -> None:
     action = yaml.safe_load((ROOT / "community" / "github-action" / "action.yml").read_text(encoding="utf-8"))
     assert input_name in action["inputs"]

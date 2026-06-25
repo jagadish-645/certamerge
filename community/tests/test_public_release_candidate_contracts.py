@@ -100,7 +100,7 @@ def test_github_action_summary_survives_gate_step_failure() -> None:
     assert "Check the prior action step logs" in action_text
 
 
-@pytest.mark.parametrize("input_name", ["policy", "repo", "output", "fail-on-block"])
+@pytest.mark.parametrize("input_name", ["policy", "repo", "output", "fail-on-block", "artifact-name"])
 def test_github_action_metadata_inputs_are_release_candidate_ready(input_name: str) -> None:
     action = yaml.safe_load(text("community/github-action/action.yml"))
     assert input_name in action["inputs"]
@@ -121,10 +121,12 @@ def test_github_action_metadata_outputs_are_release_candidate_ready(output_name:
         "python -m certamerge verify-car .tmp/payment.car.json",
         "$GITHUB_ACTION_PATH/../..",
         "Validate GitHub Action metadata",
+        "CertaMerge Action Live Validation",
     ],
 )
 def test_ci_contains_release_candidate_smoke_checks(required_ci_fragment: str) -> None:
-    assert required_ci_fragment in text(".github/workflows/ci.yml")
+    workflow_text = text(".github/workflows/ci.yml") + text(".github/workflows/certamerge-action-validation.yml")
+    assert required_ci_fragment in workflow_text
 
 
 @pytest.mark.parametrize(
