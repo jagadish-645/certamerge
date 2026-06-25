@@ -2,9 +2,9 @@
 
 ## Current Status
 
-The CertaMerge GitHub Action is statically validated and has a built-in live validation workflow for public-alpha release-candidate review.
+The CertaMerge GitHub Action is statically validated and live validated for public-alpha release-candidate review.
 
-Live validation is performed by the public repository workflow after push.
+Live validation passed in the public repository workflow after push.
 
 ## Action File
 
@@ -101,6 +101,12 @@ This workflow validates:
 - configured block path;
 - CAR artifact upload with unique artifact names;
 - generated CAR verification.
+
+Validated run:
+
+```text
+https://github.com/jagadish-645/certamerge/actions/runs/28169666397
+```
 
 Before public launch, also run the founder-facing checklist in:
 

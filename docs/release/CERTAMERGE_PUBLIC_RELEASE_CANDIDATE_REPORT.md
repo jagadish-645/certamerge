@@ -6,7 +6,7 @@ CertaMerge has advanced from controlled alpha toward public-release-candidate qu
 
 The community product is now more credible: public docs are stronger, package metadata is improved, the GitHub Action install path is corrected, release trust plans exist, CAR integrity language is honest, public/private staging exists, and the test suite expanded beyond the 120-test target.
 
-However, public release candidate is not fully ready because live GitHub Action validation has not run and release artifact integrity is planned but not implemented.
+CertaMerge is now public-release-candidate ready for alpha use with explicit limitations. Production-grade release signing, SBOM/checksum automation, and CAR cryptographic signing remain follow-up hardening work.
 
 ## 2. Repository Isolation Status
 
@@ -20,7 +20,7 @@ C:/Users/Jagadish/Desktop/CertaMerge
 
 The repo is independent from the parent Git root.
 
-Mixed root blockers:
+Mixed root note:
 
 - the mixed root workspace remains uncommitted;
 - the mixed root workspace still contains public, private, architecture, agent-system, and strategy material;
@@ -43,7 +43,7 @@ Clean staging repos now exist:
 .tmp/enterprise-staging
 ```
 
-They are locally committed and configured with the verified GitHub remotes.
+They are locally committed, configured with verified GitHub remotes, and pushed.
 
 Report:
 
@@ -134,7 +134,11 @@ docs/release/GITHUB_ACTION_LIVE_VALIDATION_CHECKLIST.md
 Remaining blocker:
 
 ```text
-No live GitHub Actions run has been performed from the pushed public repository.
+Live GitHub Action validation passed:
+
+```text
+https://github.com/jagadish-645/certamerge/actions/runs/28169666397
+```
 ```
 
 ## 6. CAR Integrity And Signing Status
@@ -177,7 +181,7 @@ Created:
 - `docs/release/SBOM_AND_PROVENANCE_PLAN.md`
 - `docs/release/RELEASE_ARTIFACT_INTEGRITY_PLAN.md`
 
-Remaining blockers:
+Remaining production hardening work:
 
 - no generated SBOM artifact;
 - no checksum manifest;
@@ -249,7 +253,7 @@ docs/release/ENTERPRISE_DESIGN_PARTNER_READINESS_REPORT.md
 Current gate:
 
 ```text
-NO-GO
+GO
 ```
 
 Report:
@@ -260,24 +264,21 @@ docs/release/PUBLIC_ALPHA_GO_NO_GO.md
 
 ## 12. Known Limitations
 
-- Public/private repo split is locally staged but not live-validated after push.
-- GitHub Action live validation not run.
-- Release artifact integrity not implemented.
+- Release artifact integrity workflow is not implemented.
 - CAR cryptographic signing not implemented.
-- Public package metadata still needs enterprise split.
 - Enterprise alpha is not production deployment ready.
 
 ## 13. Exact Next Founder Actions
 
-1. Push validated public staging to `jagadish-645/certamerge`.
-2. Push validated enterprise staging to `jagadish-645/certamerge_enterprise`.
-3. Run live GitHub Action validation from the public repository.
-4. Decide minimum artifact integrity requirement for public alpha.
+1. Add release SBOM/checksum workflow.
+2. Decide public release signing method.
+3. Implement production-grade CAR cryptographic signing before production authorization claims.
+4. Use the public repo for alpha feedback and issue capture.
 
 ## 14. Exact Next Codex Goal
 
-Push the validated staging repositories, observe GitHub CI, run the live GitHub Action checklist, and implement minimum SBOM/checksum release integrity.
+Implement minimum SBOM/checksum release integrity and prepare a tagged public alpha release.
 
 ## Final Verdict
 
-CERTAMERGE PUBLIC RELEASE CANDIDATE NOT READY — missing: live GitHub Action validation, release SBOM/checksum/signing implementation, production-grade CAR cryptographic signing
+CERTAMERGE PUBLIC RELEASE CANDIDATE READY

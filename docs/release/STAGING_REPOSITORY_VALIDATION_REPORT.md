@@ -95,18 +95,36 @@ enterprise staging forbidden-directory scan passed
 
 ## Git State
 
-Both staging repositories were initialized on `main`, committed locally, and configured with remotes:
+Both staging repositories were initialized on `main`, committed locally, configured with remotes, and pushed:
 
 ```text
 public staging remote:     https://github.com/jagadish-645/certamerge
 enterprise staging remote: https://github.com/jagadish-645/certamerge_enterprise
 ```
 
+Public staging current commit:
+
+```text
+1102c51
+```
+
+Enterprise staging current commit:
+
+```text
+8a97717
+```
+
+GitHub validation:
+
+```text
+CertaMerge CI: https://github.com/jagadish-645/certamerge/actions/runs/28169666399
+CertaMerge Action Live Validation: https://github.com/jagadish-645/certamerge/actions/runs/28169666397
+```
+
 ## Remaining Public Release Gaps
 
-Even with staging validated, public release remains gated by:
+Even with staging validated, production release remains gated by:
 
-- live GitHub Actions validation after push;
 - release SBOM generation;
 - release checksum manifest;
 - release signing decision and verification instructions;
@@ -114,6 +132,6 @@ Even with staging validated, public release remains gated by:
 
 ## Verdict
 
-Public/private staging split is validated locally.
+Public/private staging split is validated locally and pushed.
 
-Public release candidate is closer, but not complete until live GitHub and release artifact integrity gates pass.
+Public release candidate is ready for alpha use with documented release-artifact and signing limitations.

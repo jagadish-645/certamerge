@@ -81,6 +81,12 @@ The public CertaMerge repository also contains:
 
 This workflow should pass on `main` before public release. It validates allow, observe would-block, and configured-block behavior using unique CAR artifact names.
 
+Current validated run:
+
+```text
+https://github.com/jagadish-645/certamerge/actions/runs/28169666397
+```
+
 ## Artifact And Log Review
 
 Confirm:
