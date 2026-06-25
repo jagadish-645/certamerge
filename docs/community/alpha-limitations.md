@@ -29,13 +29,13 @@ Community alpha is not intended for:
 |---|---|---|
 | CAR integrity | SHA-256 content hash over canonical CAR content is implemented and verified. | Local tampering can be detected, but CARs are not cryptographically signed. |
 | Signing keys | Signing-key lifecycle is specified, not implemented. | Do not claim non-repudiation or signer identity proof. |
-| GitHub Action | Composite action metadata and static contract tests exist. | Live validation in a clean GitHub repo is still required before public launch. |
+| GitHub Action | Composite action metadata, static contract tests, and sample live-validation paths exist. | It is suitable for proof-only experiments, not production branch-protection enforcement. |
 | Evidence adapters | Basic local adapters and SARIF/test/approval state handling exist. | Deep scanner-specific parsing remains limited. |
 | Policy engine | YAML policy parsing and deterministic evaluation exist. | Policy language is intentionally small and may change before stable release. |
 | Recovery | Local Recover detects proof gaps from repo metadata and evidence files. | It is not a complete production readiness assessment. |
 | No source egress | Community commands do not call vendor services or telemetry by default. | Users must still avoid placing secrets in sample policies, evidence files, or CAR artifacts. |
 | Packaging | Editable install works from repo root. | Signed wheels, release checksums, and SBOM-backed release artifacts are not published yet. |
-| Enterprise runtime | Enterprise alpha exists in this workspace. | It is design-partner material, not part of the public community repo by default. |
+| Organization-wide runtime | Advanced enterprise deployment and governance surfaces are outside this community repository. | Do not treat community alpha as an enterprise control plane. |
 
 ## Safe Claims
 
@@ -66,14 +66,14 @@ The public `certamerge` repository should contain community-safe assets only:
 - public release docs;
 - tests that validate the community product.
 
-Enterprise alpha code, enterprise docs, paid-tier strategy, pilot packets, proprietary policy/risk packs, and internal agent-system artifacts should remain private until an explicit open-core publication decision is made.
+Advanced enterprise deployment, organization-wide policy administration, proprietary policy/risk packs, pilot packets, and internal agent-system artifacts are outside this repository until an explicit open-core publication decision is made.
 
 ## When This Becomes Public-Release Ready
 
 Community alpha becomes public-release ready when:
 
 - the repo is isolated and committed cleanly;
-- Public/private split is applied;
+- the public repository contains only community-safe assets;
 - install and sample flows pass in a clean environment;
 - tests exceed the release-candidate target with meaningful coverage;
 - GitHub Action static validation passes and live validation is either completed or founder-run instructions are exact;

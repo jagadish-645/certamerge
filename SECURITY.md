@@ -6,7 +6,7 @@ CertaMerge is an authorization and proof tool. It must be safer than the workflo
 
 | Version | Status |
 |---|---|
-| `0.1.x` community alpha | Security feedback accepted. Public release not yet final. |
+| `0.1.x` community alpha | Security feedback accepted. Not recommended for unattended production blocking. |
 
 ## Current Community Security Posture
 
@@ -24,21 +24,14 @@ CertaMerge is an authorization and proof tool. It must be safer than the workflo
 - CARs are not cryptographically signed yet.
 - Public release artifacts are not signed yet.
 - SBOM/provenance generation is planned for release hardening.
-- Live GitHub Action validation in a clean repository is still required.
-- Enterprise deployment hardening is alpha/design-partner only.
+- GitHub Action validation has coverage for sample allow, observe, and configured-block paths.
+- Production deployment hardening is not part of the community alpha.
 
 ## Reporting Security Issues
 
-Before public release, report security concerns directly to the project owner through the private founder channel for this workspace.
+For now, open a GitHub issue that asks for a secure maintainer contact without including exploit details, sensitive logs, or proof-of-concept payloads. If GitHub Security Advisories are enabled for the repository, use that channel instead.
 
-After public release, the repository should publish:
-
-- a dedicated security contact;
-- private vulnerability intake path;
-- supported versions policy;
-- advisory publication process;
-- expected triage response windows;
-- coordinated disclosure expectations.
+The project should publish a dedicated security contact, advisory publication process, expected triage response windows, and coordinated disclosure expectations before any production deployment claim.
 
 Do not disclose suspected vulnerabilities publicly before the maintainer has a chance to investigate and prepare a fix.
 
@@ -51,7 +44,7 @@ Do not include any of the following in issues, sample CARs, policies, evidence f
 - private keys;
 - customer production data;
 - raw proprietary source code;
-- raw diffs from private repositories;
+- raw diffs from restricted repositories;
 - unredacted scanner payloads that contain private content.
 
 ## Safe Claims
@@ -78,5 +71,4 @@ CertaMerge must not claim:
 - Generate SBOM for release artifacts.
 - Publish checksums for release artifacts.
 - Decide release signing method.
-- Complete GitHub Action live validation.
-- Keep enterprise-only code and docs out of the public repository unless explicitly approved.
+- Keep advanced enterprise-only code and docs out of the community repository unless explicitly approved for public release.

@@ -24,9 +24,9 @@ It is not an AI code reviewer, scanner, chatbot, or compliance certification too
 | Verify a CAR? | `python -m certamerge verify-car .tmp/payment.car.json` |
 | Output shape? | Verdict, policy reason, missing proof, accountable next action, CAR. |
 | Community/open source? | CLI, CAR spec/verifier, Recover, proof-only Gate, basic policies, evidence states, repair missions, GitHub Action wrapper, samples, docs. |
-| Enterprise? | Design-partner alpha foundation for org policy, SoD, observe replay, ProofGraph memory, audit export, and self-hosted governance. |
+| Enterprise? | Not included in this public community alpha. Advanced org policy, SoD, observe replay, ProofGraph memory, audit export, and self-hosted governance are outside the community package. |
 | Non-claims? | CertaMerge does not make code secure, certify compliance, replace scanners, or guarantee production safety. |
-| Alpha limits? | Local/community alpha only; CAR hash integrity exists, cryptographic signing and live GitHub Action validation are not release-proven yet. |
+| Alpha limits? | Local/community alpha only; CAR hash integrity exists, cryptographic signing and production deployment hardening are not implemented yet. |
 
 ## 5-Minute Quickstart
 
@@ -106,9 +106,11 @@ That grammar is the product. Anything that cannot serve it is out of scope for t
 - It does not include SSO, RBAC, admin UI, hosted SaaS, or dashboard-first workflows.
 - It does not publish raw source code, raw diffs, secrets, or tokens in CAR output by default.
 
-## Public And Private Boundary
+## Repository Boundary
 
-This workspace currently contains both community and enterprise alpha material. The public `certamerge` repository must receive only the community-safe surface. Enterprise alpha material belongs in the private `certamerge_enterprise` repository until an explicit open-core split is made.
+This repository is the community alpha surface. It contains the local CLI, CAR verifier, proof-only Gate, Recover, basic policy examples, sample repositories, specs, tests, and a composite GitHub Action wrapper.
+
+Advanced organization-wide capabilities are intentionally outside this package until they can be evaluated, documented, and released with a clear open-core boundary.
 
 See:
 
@@ -116,6 +118,7 @@ See:
 - [Alpha limitations](docs/community/alpha-limitations.md)
 - [CAR integrity](docs/community/car-integrity.md)
 - [No source egress](docs/community/no-source-egress.md)
+- [5-minute demo](docs/demo/5_MINUTE_PUBLIC_ALPHA_DEMO.md)
 - [GitHub Action validation](docs/community/github-action-validation.md)
 
 ## Safe Language
