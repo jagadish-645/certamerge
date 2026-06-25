@@ -1,0 +1,18 @@
+version: 0.1
+mode: proof_only
+rules:
+  - id: CM-PAY-001
+    when:
+      paths:
+        - "src/payments/**"
+      risk_surfaces:
+        - payments
+    require:
+      evidence:
+        - tests
+        - owner_approval
+      owner: payments-owner
+      repair_mission: add-payment-proof
+    verdict_if_missing: NEEDS_EVIDENCE
+    severity: high
+    reason: "Payment changes require test evidence and owner approval."

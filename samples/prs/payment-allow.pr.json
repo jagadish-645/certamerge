@@ -1,0 +1,8 @@
+{
+  "pr_id": "PR-PAY-001",
+  "title": "Update payment refund guard",
+  "repo_path": "samples/repos/payment-change-with-tests",
+  "policy_path": "samples/policies/payment.certamerge.yml",
+  "expected_verdict": "ALLOW",
+  "expected_missing_proof": []
+}

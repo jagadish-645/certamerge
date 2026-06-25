@@ -1,0 +1,85 @@
+name: CertaMerge Proof Gate
+description: Run CertaMerge Community Gate in GitHub Actions and upload the generated CAR artifact.
+inputs:
+  policy:
+    description: Path to the CertaMerge policy file.
+    required: false
+    default: .certamerge.yml
+  repo:
+    description: Repository path to evaluate.
+    required: false
+    default: .
+  output:
+    description: CAR output path.
+    required: false
+    default: certamerge-car.json
+  fail-on-block:
+    description: Fail the job when CertaMerge emits BLOCK, HARD_BLOCK, SOFT_BLOCK, REPAIR_REQUIRED, or NEEDS_EVIDENCE.
+    required: false
+    default: "false"
+outputs:
+  car-path:
+    description: Path to the generated Change Authorization Record.
+    value: ${{ inputs.output }}
+  verdict:
+    description: CertaMerge verdict emitted by the generated CAR.
+    value: ${{ steps.gate.outputs.verdict }}
+  summary-path:
+    description: Path to the workflow-native CertaMerge summary text.
+    value: certamerge-summary.txt
+runs:
+  using: composite
+  steps:
+    - name: Install CertaMerge
+      shell: bash
+      run: python -m pip install "$GITHUB_ACTION_PATH/../.."
+    - name: Run CertaMerge Gate
+      id: gate
+      shell: bash
+      run: |
+        certamerge gate --repo "${{ inputs.repo }}" --policy "${{ inputs.policy }}" --output "${{ inputs.output }}" | tee certamerge-summary.txt
+        python - "${{ inputs.output }}" <<'PY' >> "$GITHUB_OUTPUT"
+        import json
+        import sys
+        with open(sys.argv[1], "r", encoding="utf-8") as handle:
+            car = json.load(handle)
+        print(f"verdict={car['verdict']['state']}")
+        PY
+    - name: Write CertaMerge PR Summary
+      shell: bash
+      if: always()
+      run: |
+        {
+          echo "## CertaMerge"
+          echo
+          if [ -f certamerge-summary.txt ]; then
+            cat certamerge-summary.txt
+          else
+            echo "CertaMerge did not produce a summary. Check the prior action step logs."
+          fi
+          echo
+          echo "CAR artifact: certamerge-car"
+        } >> "$GITHUB_STEP_SUMMARY"
+    - name: Upload CertaMerge CAR
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: certamerge-car
+        path: ${{ inputs.output }}
+    - name: Fail on blocking verdict when configured
+      if: ${{ inputs.fail-on-block == 'true' }}
+      shell: bash
+      run: |
+        python - "$CM_CAR" <<'PY'
+        import json
+        import sys
+        path = sys.argv[1]
+        with open(path, "r", encoding="utf-8") as handle:
+            car = json.load(handle)
+        verdict = car["verdict"]["state"]
+        blocking = {"BLOCK", "HARD_BLOCK", "SOFT_BLOCK", "REPAIR_REQUIRED", "NEEDS_EVIDENCE", "OBSERVE_ONLY_WOULD_BLOCK"}
+        if verdict in blocking:
+            raise SystemExit(f"CertaMerge blocking verdict: {verdict}")
+        PY
+      env:
+        CM_CAR: ${{ inputs.output }}

@@ -1,0 +1,11 @@
+{
+  "pr_id": "PR-AUTH-001",
+  "title": "Update auth session handling",
+  "repo_path": "samples/repos/auth-change-missing-tests",
+  "policy_path": "samples/policies/auth.certamerge.yml",
+  "expected_verdict": "OBSERVE_ONLY_WOULD_BLOCK",
+  "expected_missing_proof": [
+    "tests",
+    "owner_approval"
+  ]
+}

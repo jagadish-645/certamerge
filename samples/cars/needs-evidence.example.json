@@ -1,0 +1,121 @@
+{
+  "car_version": "0.1",
+  "car_id": "car_sample_needs_evidence_001",
+  "created_at": "2026-06-25T06:54:42Z",
+  "record_state": "pending",
+  "change": {
+    "change_id": "local_repo_snapshot",
+    "change_type": "repo_snapshot",
+    "source_system": "local",
+    "source_ref": "C:\\Users\\Jagadish\\Desktop\\CertaMerge\\samples\\repos\\basic-node-app",
+    "base_ref": "unknown",
+    "head_ref": "working_tree",
+    "created_at": "2026-06-25T06:54:42Z"
+  },
+  "repository": {
+    "repo_id": "local:basic-node-app",
+    "repo_name": "basic-node-app",
+    "provider": "local",
+    "default_branch": "unknown",
+    "metadata_only": true
+  },
+  "actors": [
+    {
+      "actor_id": "local-user",
+      "actor_type": "human",
+      "source": "local"
+    }
+  ],
+  "risk_surfaces": [
+    "dependency"
+  ],
+  "policy": {
+    "policy_id": "sample-policy",
+    "policy_version": "0.1",
+    "mode": "proof_only",
+    "policy_hash": "sha256:sample-policy"
+  },
+  "evidence": [
+    {
+      "evidence_id": "ev_test_result",
+      "type": "test_result",
+      "state": "present",
+      "source": "local",
+      "summary": "Test script configured."
+    },
+    {
+      "evidence_id": "ev_ci_status",
+      "type": "ci_status",
+      "state": "missing",
+      "source": "local",
+      "summary": "CI evidence is missing."
+    }
+  ],
+  "missing_proof": [
+    {
+      "proof_id": "mp_ci_status",
+      "type": "ci_status",
+      "state": "missing",
+      "reason": "CI proof is required."
+    }
+  ],
+  "verdict": {
+    "state": "NEEDS_EVIDENCE",
+    "policy_reason": "Policy CM-BASIC-001 requires CI proof for package metadata changes.",
+    "enforcement_effect": "proof_only"
+  },
+  "verdict_trace": [
+    {
+      "rule_id": "CM-BASIC-001",
+      "result": "missing_evidence",
+      "evidence_refs": [
+        "ev_test_result",
+        "ev_ci_status"
+      ]
+    }
+  ],
+  "repair_missions": [
+    {
+      "mission_id": "R-CI-STATUS-001",
+      "objective": "Produce CI status evidence.",
+      "why": "CI proof is required.",
+      "risk_surface": "dependency",
+      "source_verdict": "NEEDS_EVIDENCE",
+      "proof_gap_id": "mp_ci_status",
+      "required_proof": [
+        "ci_status"
+      ],
+      "human_action": "Run CI or attach CI status evidence.",
+      "agent_prompt": "Collect CI status evidence only; do not authorize.",
+      "acceptance_criteria": "CI evidence is present and bound to the change.",
+      "rerun_instruction": "certamerge gate --repo . --policy .certamerge.yml",
+      "expected_car_change": "pending to final if all proof passes"
+    }
+  ],
+  "accountable_next_action": {
+    "owner": "repo-owner",
+    "action": "Attach CI proof and rerun CertaMerge Gate."
+  },
+  "replay": {
+    "policy_version": "0.1",
+    "policy_hash": "sha256:sample-policy",
+    "evaluator_version": "certamerge-community-0.1.0",
+    "evidence_snapshot_time": "2026-06-25T06:54:42Z",
+    "evidence_refs": [
+      "ev_test_result",
+      "ev_ci_status"
+    ],
+    "risk_pack_versions": [
+      "community-basic-0.1"
+    ],
+    "repair_pack_versions": [
+      "community-basic-0.1"
+    ]
+  },
+  "integrity": {
+    "canonicalization": "certamerge-json-canonical-v0",
+    "content_hash": "sha256:df483ffa821649a904154766e40a3ffe2c72ad2565b7b894538f0d08de10bfcb",
+    "hash_algorithm": "sha256",
+    "verifier_version": "certamerge-community-0.1.0"
+  }
+}

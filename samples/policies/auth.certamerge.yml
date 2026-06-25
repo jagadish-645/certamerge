@@ -1,0 +1,19 @@
+version: 0.1
+mode: observe
+rules:
+  - id: CM-AUTH-001
+    when:
+      paths:
+        - "src/auth/**"
+        - "app/auth/**"
+      risk_surfaces:
+        - auth
+    require:
+      evidence:
+        - tests
+        - owner_approval
+      owner: auth-owner
+      repair_mission: add-auth-test-proof
+    verdict_if_missing: NEEDS_EVIDENCE
+    severity: high
+    reason: "Auth changes require test evidence and owner approval."

@@ -1,0 +1,112 @@
+{
+  "car_version": "0.1",
+  "car_id": "car_sample_block_001",
+  "created_at": "2026-06-25T06:54:42Z",
+  "record_state": "pending",
+  "change": {
+    "change_id": "local_repo_snapshot",
+    "change_type": "repo_snapshot",
+    "source_system": "local",
+    "source_ref": "C:\\Users\\Jagadish\\Desktop\\CertaMerge\\samples\\repos\\basic-node-app",
+    "base_ref": "unknown",
+    "head_ref": "working_tree",
+    "created_at": "2026-06-25T06:54:42Z"
+  },
+  "repository": {
+    "repo_id": "local:basic-node-app",
+    "repo_name": "basic-node-app",
+    "provider": "local",
+    "default_branch": "unknown",
+    "metadata_only": true
+  },
+  "actors": [
+    {
+      "actor_id": "local-user",
+      "actor_type": "human",
+      "source": "local"
+    }
+  ],
+  "risk_surfaces": [
+    "dependency"
+  ],
+  "policy": {
+    "policy_id": "sample-policy",
+    "policy_version": "0.1",
+    "mode": "proof_only",
+    "policy_hash": "sha256:sample-policy"
+  },
+  "evidence": [
+    {
+      "evidence_id": "ev_test_result",
+      "type": "test_result",
+      "state": "failed",
+      "source": "local",
+      "summary": "Test evidence is valid and failing."
+    }
+  ],
+  "missing_proof": [
+    {
+      "proof_id": "mp_tests",
+      "type": "tests",
+      "state": "failed",
+      "reason": "Required tests failed."
+    }
+  ],
+  "verdict": {
+    "state": "BLOCK",
+    "policy_reason": "Policy CM-TEST-001 requires passing test evidence; valid evidence shows failure.",
+    "enforcement_effect": "proof_only"
+  },
+  "verdict_trace": [
+    {
+      "rule_id": "CM-TEST-001",
+      "result": "failed_evidence",
+      "evidence_refs": [
+        "ev_test_result"
+      ]
+    }
+  ],
+  "repair_missions": [
+    {
+      "mission_id": "R-TESTS-001",
+      "objective": "Fix failing tests and produce passing test evidence.",
+      "why": "Required tests failed.",
+      "risk_surface": "dependency",
+      "source_verdict": "BLOCK",
+      "proof_gap_id": "mp_tests",
+      "required_proof": [
+        "tests"
+      ],
+      "human_action": "Fix the failure and rerun tests.",
+      "agent_prompt": "Fix tests and return test evidence only; do not authorize.",
+      "acceptance_criteria": "Test evidence is present and passing.",
+      "rerun_instruction": "certamerge gate --repo . --policy .certamerge.yml",
+      "expected_car_change": "block to allow if policy passes"
+    }
+  ],
+  "accountable_next_action": {
+    "owner": "repo-owner",
+    "action": "Fix failing evidence, then rerun CertaMerge Gate."
+  },
+  "replay": {
+    "policy_version": "0.1",
+    "policy_hash": "sha256:sample-policy",
+    "evaluator_version": "certamerge-community-0.1.0",
+    "evidence_snapshot_time": "2026-06-25T06:54:42Z",
+    "evidence_refs": [
+      "ev_test_result"
+    ],
+    "risk_pack_versions": [
+      "community-basic-0.1"
+    ],
+    "repair_pack_versions": [
+      "community-basic-0.1"
+    ]
+  },
+  "integrity": {
+    "canonicalization": "certamerge-json-canonical-v0",
+    "content_hash": "sha256:d714c0f9ad67ade1a9dde3a5a65e8a9ac9109292e7f3d7e61dd8877cc1d4fb5e",
+    "hash_algorithm": "sha256",
+    "verifier_version": "certamerge-community-0.1.0"
+  }
+}

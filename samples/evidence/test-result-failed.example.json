@@ -1,0 +1,9 @@
+{
+  "evidence_id": "ev_test_result_failed_example",
+  "type": "test_result",
+  "state": "failed",
+  "source": "example-ci",
+  "summary": "Example test result evidence is valid and failing.",
+  "artifact_ref": "ci://example/run/failed-tests",
+  "sensitive": "metadata"
+}

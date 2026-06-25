@@ -1,0 +1,7 @@
+{
+  "approval_id": "approval-conflicting-denied-001",
+  "owner": "auth-owner",
+  "scope": "auth sample",
+  "decision": "denied",
+  "recorded_at": "2026-06-25T00:00:00Z"
+}

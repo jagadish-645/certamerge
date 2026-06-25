@@ -1,0 +1,102 @@
+{
+  "car_version": "0.1",
+  "car_id": "car_sample_override_recorded_001",
+  "created_at": "2026-06-25T06:54:42Z",
+  "record_state": "override_recorded",
+  "change": {
+    "change_id": "local_repo_snapshot",
+    "change_type": "repo_snapshot",
+    "source_system": "local",
+    "source_ref": "C:\\Users\\Jagadish\\Desktop\\CertaMerge\\samples\\repos\\basic-node-app",
+    "base_ref": "unknown",
+    "head_ref": "working_tree",
+    "created_at": "2026-06-25T06:54:42Z"
+  },
+  "repository": {
+    "repo_id": "local:basic-node-app",
+    "repo_name": "basic-node-app",
+    "provider": "local",
+    "default_branch": "unknown",
+    "metadata_only": true
+  },
+  "actors": [
+    {
+      "actor_id": "local-user",
+      "actor_type": "human",
+      "source": "local"
+    }
+  ],
+  "risk_surfaces": [
+    "deployment"
+  ],
+  "policy": {
+    "policy_id": "sample-policy",
+    "policy_version": "0.1",
+    "mode": "proof_only",
+    "policy_hash": "sha256:sample-policy"
+  },
+  "evidence": [
+    {
+      "evidence_id": "ev_ci_status",
+      "type": "ci_status",
+      "state": "unavailable",
+      "source": "local",
+      "summary": "CI unavailable during emergency window."
+    }
+  ],
+  "missing_proof": [
+    {
+      "proof_id": "mp_ci_status",
+      "type": "ci_status",
+      "state": "unavailable",
+      "reason": "CI proof unavailable; emergency override used."
+    }
+  ],
+  "verdict": {
+    "state": "OVERRIDE_RECORDED",
+    "policy_reason": "Authorized emergency override recorded; original proof gap remains visible.",
+    "enforcement_effect": "override_recorded"
+  },
+  "verdict_trace": [
+    {
+      "rule_id": "CM-OVERRIDE-001",
+      "result": "override_recorded",
+      "evidence_refs": [
+        "ev_ci_status"
+      ]
+    }
+  ],
+  "repair_missions": [],
+  "accountable_next_action": {
+    "owner": "release-owner",
+    "action": "Review override after emergency and attach retrospective proof if available."
+  },
+  "replay": {
+    "policy_version": "0.1",
+    "policy_hash": "sha256:sample-policy",
+    "evaluator_version": "certamerge-community-0.1.0",
+    "evidence_snapshot_time": "2026-06-25T06:54:42Z",
+    "evidence_refs": [
+      "ev_ci_status"
+    ],
+    "risk_pack_versions": [
+      "community-basic-0.1"
+    ],
+    "repair_pack_versions": [
+      "community-basic-0.1"
+    ]
+  },
+  "integrity": {
+    "canonicalization": "certamerge-json-canonical-v0",
+    "content_hash": "sha256:82de8007d2e94d6e59e7a17b0be5db559b35fa2800afd59faf3515d4ba5b8b93",
+    "hash_algorithm": "sha256",
+    "verifier_version": "certamerge-community-0.1.0"
+  },
+  "override": {
+    "status": "recorded",
+    "owner": "release-owner",
+    "reason": "emergency release window",
+    "expires_at": "2026-06-26T00:00:00Z",
+    "original_verdict": "NEEDS_EVIDENCE"
+  }
+}

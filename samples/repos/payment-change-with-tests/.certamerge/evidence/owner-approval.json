@@ -1,0 +1,7 @@
+{
+  "approval_id": "approval-payment-owner-001",
+  "owner": "payments-owner",
+  "scope": "payment sample",
+  "decision": "approved",
+  "recorded_at": "2026-06-25T00:00:00Z"
+}

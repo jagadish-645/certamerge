@@ -1,0 +1,202 @@
+{
+  "car_version": "0.1",
+  "car_id": "car_sample_allow_001",
+  "created_at": "2026-06-25T06:54:42Z",
+  "record_state": "final",
+  "change": {
+    "change_id": "sample_allow_change",
+    "change_type": "repo_snapshot",
+    "source_system": "local",
+    "source_ref": "C:\\Users\\Jagadish\\Desktop\\CertaMerge\\samples\\repos\\payment-change-with-tests",
+    "base_ref": "unknown",
+    "head_ref": "working_tree",
+    "created_at": "2026-06-25T06:54:42Z"
+  },
+  "repository": {
+    "repo_id": "local:payment-change-with-tests",
+    "repo_name": "payment-change-with-tests",
+    "provider": "local",
+    "default_branch": "unknown",
+    "metadata_only": true
+  },
+  "actors": [
+    {
+      "actor_id": "local-user",
+      "actor_type": "human",
+      "source": "local"
+    }
+  ],
+  "risk_surfaces": [
+    "dependency",
+    "deployment",
+    "payments"
+  ],
+  "policy": {
+    "policy_id": "payment.certamerge",
+    "policy_version": "0.1",
+    "mode": "proof_only",
+    "policy_hash": "sha256:51d6c708272345f617d8d6a20401f3a0cf5062c836d954e23f6db2f0504bf7d6"
+  },
+  "evidence": [
+    {
+      "evidence_id": "ev_ci_status",
+      "type": "ci_status",
+      "state": "present",
+      "source": "local",
+      "summary": "CI configuration present.",
+      "artifact_ref": ".github/workflows/ci.yml",
+      "artifact_refs": [
+        ".github/workflows/ci.yml"
+      ],
+      "sensitive": "metadata",
+      "details": {}
+    },
+    {
+      "evidence_id": "ev_test_result",
+      "type": "test_result",
+      "state": "present",
+      "source": "local",
+      "summary": "Test command configured.",
+      "artifact_ref": "package.json:scripts.test",
+      "artifact_refs": [
+        "package.json:scripts.test"
+      ],
+      "sensitive": "metadata",
+      "details": {}
+    },
+    {
+      "evidence_id": "ev_lint_result",
+      "type": "lint_result",
+      "state": "missing",
+      "source": "local",
+      "summary": "Lint evidence is missing.",
+      "artifact_ref": "",
+      "artifact_refs": [],
+      "sensitive": "metadata",
+      "details": {}
+    },
+    {
+      "evidence_id": "ev_sarif_scan",
+      "type": "sarif_scan",
+      "state": "missing",
+      "source": "local",
+      "summary": "SARIF/code scanning evidence is missing.",
+      "artifact_ref": "",
+      "artifact_refs": [],
+      "sensitive": "metadata",
+      "details": {}
+    },
+    {
+      "evidence_id": "ev_dependency_reference",
+      "type": "dependency_reference",
+      "state": "present",
+      "source": "local",
+      "summary": "Dependency lockfile or SBOM reference present.",
+      "artifact_ref": "package-lock.json",
+      "artifact_refs": [
+        "package-lock.json"
+      ],
+      "sensitive": "metadata",
+      "details": {}
+    },
+    {
+      "evidence_id": "ev_owner_approval",
+      "type": "owner_approval",
+      "state": "present",
+      "source": "local",
+      "summary": "Owner approval reference present and approved.",
+      "artifact_ref": ".certamerge/evidence/owner-approval.json",
+      "artifact_refs": [
+        ".certamerge/evidence/owner-approval.json"
+      ],
+      "sensitive": "metadata",
+      "details": {
+        "approvers": [
+          "payments-owner"
+        ]
+      }
+    },
+    {
+      "evidence_id": "ev_github_actions_artifact",
+      "type": "github_actions_artifact",
+      "state": "present",
+      "source": "local",
+      "summary": "GitHub Actions workflow reference present.",
+      "artifact_ref": ".github/workflows/ci.yml",
+      "artifact_refs": [
+        ".github/workflows/ci.yml"
+      ],
+      "sensitive": "metadata",
+      "details": {}
+    },
+    {
+      "evidence_id": "ev_security_doc",
+      "type": "security_doc",
+      "state": "missing",
+      "source": "local",
+      "summary": "Security policy document is missing.",
+      "artifact_ref": "",
+      "artifact_refs": [],
+      "sensitive": "metadata",
+      "details": {}
+    }
+  ],
+  "missing_proof": [],
+  "verdict": {
+    "state": "ALLOW",
+    "policy_reason": "All matched policy requirements are satisfied.",
+    "enforcement_effect": "proof_only"
+  },
+  "verdict_trace": [
+    {
+      "rule_id": "CM-PAY-001",
+      "result": "satisfied",
+      "matched_paths": [
+        "src/payments/refund.js"
+      ],
+      "evidence_refs": [
+        "ev_ci_status",
+        "ev_test_result",
+        "ev_lint_result",
+        "ev_sarif_scan",
+        "ev_dependency_reference",
+        "ev_owner_approval",
+        "ev_github_actions_artifact",
+        "ev_security_doc"
+      ]
+    }
+  ],
+  "repair_missions": [],
+  "accountable_next_action": {
+    "owner": "repo-owner",
+    "action": "Proceed with record."
+  },
+  "replay": {
+    "policy_version": "0.1",
+    "policy_hash": "sha256:51d6c708272345f617d8d6a20401f3a0cf5062c836d954e23f6db2f0504bf7d6",
+    "evaluator_version": "certamerge-community-0.1.0",
+    "evidence_snapshot_time": "2026-06-25T06:54:42Z",
+    "evidence_refs": [
+      "ev_ci_status",
+      "ev_test_result",
+      "ev_lint_result",
+      "ev_sarif_scan",
+      "ev_dependency_reference",
+      "ev_owner_approval",
+      "ev_github_actions_artifact",
+      "ev_security_doc"
+    ],
+    "risk_pack_versions": [
+      "community-basic-0.1"
+    ],
+    "repair_pack_versions": [
+      "community-basic-0.1"
+    ]
+  },
+  "integrity": {
+    "canonicalization": "certamerge-json-canonical-v0",
+    "content_hash": "sha256:321b6140dc2c3f414e6b4ddd17c2b8a97c836796c673bea7a48f133b0e333bfa",
+    "hash_algorithm": "sha256",
+    "verifier_version": "certamerge-community-0.1.0"
+  }
+}

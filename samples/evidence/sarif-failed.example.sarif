@@ -1,0 +1,21 @@
+{
+  "version": "2.1.0",
+  "runs": [
+    {
+      "tool": {
+        "driver": {
+          "name": "example-scanner"
+        }
+      },
+      "results": [
+        {
+          "ruleId": "EXAMPLE-HIGH-001",
+          "level": "error",
+          "message": {
+            "text": "Example redacted high-risk finding."
+          }
+        }
+      ]
+    }
+  ]
+}

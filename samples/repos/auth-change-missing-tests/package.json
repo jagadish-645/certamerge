@@ -1,0 +1,8 @@
+{
+  "name": "auth-change-missing-tests",
+  "version": "1.0.0",
+  "scripts": {
+    "start": "node src/auth/session.js"
+  },
+  "dependencies": {}
+}

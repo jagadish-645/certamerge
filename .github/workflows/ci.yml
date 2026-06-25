@@ -1,0 +1,51 @@
+name: CertaMerge CI
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install CertaMerge
+        run: python -m pip install -e .
+      - name: Run community CLI smoke flows
+        run: |
+          python -m certamerge --help
+          python -m certamerge recover samples/repos/no-ci-vibe-repo
+          python -m certamerge gate --repo samples/repos/payment-change-with-tests --policy samples/policies/payment.certamerge.yml --output .tmp/payment.car.json
+          python -m certamerge verify-car .tmp/payment.car.json
+          python -m certamerge explain-car .tmp/payment.car.json
+      - name: Run tests
+        run: python -m pytest
+      - name: Compile Python modules
+        run: python -m compileall community
+      - name: Verify sample CAR
+        run: python -m certamerge verify-car samples/cars/allow.example.json
+      - name: Validate GitHub Action metadata
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import yaml
+
+          action = yaml.safe_load(Path("community/github-action/action.yml").read_text(encoding="utf-8"))
+          assert action["runs"]["using"] == "composite"
+          assert {"policy", "repo", "output", "fail-on-block"} <= set(action["inputs"])
+          assert {"car-path", "verdict", "summary-path"} <= set(action["outputs"])
+          steps = "\n".join(step.get("run", "") + " " + step.get("uses", "") for step in action["runs"]["steps"])
+          assert "$GITHUB_ACTION_PATH/../.." in steps
+          assert "actions/upload-artifact@v4" in steps
+          assert "GITHUB_STEP_SUMMARY" in steps
+          PY

@@ -1,0 +1,15 @@
+version: 0.1
+mode: observe
+rules:
+  - id: CM-BASIC-001
+    when:
+      paths:
+        - "package.json"
+        - "pyproject.toml"
+    require:
+      evidence:
+        - tests
+        - ci_status
+    verdict_if_missing: NEEDS_EVIDENCE
+    severity: medium
+    reason: "Package metadata changes require tests and CI proof."

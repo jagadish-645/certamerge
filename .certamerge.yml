@@ -1,0 +1,29 @@
+version: 0.1
+mode: observe
+rules:
+  - id: CM-ROOT-001
+    when:
+      paths:
+        - "community/**"
+        - "enterprise/**"
+        - "specs/**"
+    require:
+      evidence:
+        - tests
+        - ci
+    verdict_if_missing: NEEDS_EVIDENCE
+    severity: medium
+    reason: "Core CertaMerge changes require test and CI proof before release."
+  - id: CM-ROOT-002
+    when:
+      paths:
+        - "community/cli/certamerge/verifier.py"
+        - "community/cli/certamerge/car.py"
+        - "specs/car/**"
+    require:
+      evidence:
+        - tests
+        - owner_approval
+    verdict_if_missing: ESCALATE
+    severity: high
+    reason: "CAR integrity changes require tests and owner approval."
