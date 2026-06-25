@@ -61,10 +61,10 @@ def test_readme_and_quickstart_publish_copy_paste_commands(required_command: str
     [
         "Community alpha is a useful local proof spine",
         "not cryptographically signed",
-        "Live validation in a clean GitHub repo is still required",
-        "Public/private split is applied",
+        "sample live-validation paths exist",
+        "community-safe assets",
         "It does not certify compliance",
-        "Enterprise alpha code",
+        "Advanced enterprise deployment",
         "GitHub Action static validation",
         "known limitations are public",
     ],
@@ -132,13 +132,13 @@ def test_ci_contains_release_candidate_smoke_checks(required_ci_fragment: str) -
 @pytest.mark.parametrize(
     "required_path",
     [
-        "docs/release/PUBLIC_PRIVATE_REPO_SPLIT_PLAN.md",
-        "docs/release/REPOSITORY_ISOLATION_REPORT.md",
-        "docs/release/PACKAGING_AND_INSTALL_REPORT.md",
-        "docs/release/GITHUB_ACTION_LIVE_VALIDATION_CHECKLIST.md",
-        "docs/release/CAR_INTEGRITY_RELEASE_DECISION.md",
-        "docs/release/SBOM_AND_PROVENANCE_PLAN.md",
-        "docs/release/RELEASE_ARTIFACT_INTEGRITY_PLAN.md",
+        "docs/release/V0_1_0_ALPHA_RELEASE_NOTES.md",
+        "docs/release/V0_1_0_ALPHA_VERIFICATION.md",
+        "docs/release/V0_1_0_ALPHA_CHECKSUMS.md",
+        "docs/release/PUBLIC_ALPHA_GO_NO_GO.md",
+        "docs/release/CERTAMERGE_PUBLIC_RELEASE_CANDIDATE_REPORT.md",
+        "docs/demo/5_MINUTE_PUBLIC_ALPHA_DEMO.md",
+        "docs/demo/SAMPLE_OUTPUTS.md",
     ],
 )
 def test_release_candidate_foundation_reports_exist(required_path: str) -> None:
@@ -148,16 +148,22 @@ def test_release_candidate_foundation_reports_exist(required_path: str) -> None:
 @pytest.mark.parametrize(
     "required_phrase",
     [
-        "certamerge              public",
-        "certamerge_enterprise   private",
-        "must not be pushed wholesale",
-        "community-safe assets only",
-        "Private assets",
-        "public/private split is designed and locally staged",
+        "This repository is the community alpha surface",
+        "advanced enterprise-only code and docs out of the community repository",
+        "public repository contains only community-safe assets",
+        "intentionally excludes",
+        "enterprise runtime services",
+        "internal strategy and agent-system material",
     ],
 )
-def test_public_private_split_plan_prevents_enterprise_leakage(required_phrase: str) -> None:
-    assert required_phrase in text("docs/release/PUBLIC_PRIVATE_REPO_SPLIT_PLAN.md")
+def test_public_repository_boundary_prevents_enterprise_leakage(required_phrase: str) -> None:
+    combined = (
+        text("README.md")
+        + text("SECURITY.md")
+        + text("docs/community/alpha-limitations.md")
+        + text("docs/release/CERTAMERGE_PUBLIC_RELEASE_CANDIDATE_REPORT.md")
+    )
+    assert required_phrase in combined
 
 
 def test_pyproject_has_public_alpha_metadata() -> None:
@@ -166,14 +172,16 @@ def test_pyproject_has_public_alpha_metadata() -> None:
     assert project["name"] == "certamerge"
     assert project["version"] == "0.1.0"
     assert project["readme"] == "README.md"
-    assert project["license"]["file"] == "LICENSE"
+    assert project["license"] == "MIT"
+    assert project["license-files"] == ["LICENSE"]
     assert "Development Status :: 3 - Alpha" in project["classifiers"]
+    assert "License :: OSI Approved :: MIT License" not in project["classifiers"]
 
 
-def test_packaging_report_flags_enterprise_entrypoint_split_before_publication() -> None:
-    report = text("docs/release/PACKAGING_AND_INSTALL_REPORT.md")
-    assert "certamerge-enterprise = certamerge_enterprise.cli:app" in report
-    assert "public repository must remove or split the enterprise entry point" in report
+def test_public_pyproject_has_no_enterprise_entrypoint() -> None:
+    project_text = text("pyproject.toml")
+    assert "certamerge-enterprise" not in project_text
+    assert "certamerge_enterprise" not in project_text
 
 
 def test_verify_car_returns_nonzero_for_malformed_json(tmp_path: Path) -> None:
@@ -219,13 +227,18 @@ def test_security_doc_lists_forbidden_claims_as_non_claims(forbidden_claim: str)
 @pytest.mark.parametrize(
     "required_phrase",
     [
-        "SBOM And Provenance Plan",
-        "Release Artifact Integrity Plan",
-        "Do not claim signed releases",
-        "Not implemented yet",
-        "Release artifact integrity is planned but not complete",
+        "v0.1.0 Alpha Checksums",
+        "does not publish signed distribution archives yet",
+        "signed release/SBOM automation remains release-hardening work",
+        "Cryptographic CAR signing is not implemented yet",
+        "These checks validate local CLI behavior",
     ],
 )
 def test_release_trust_docs_are_honest_about_unfinished_artifact_integrity(required_phrase: str) -> None:
-    combined = text("docs/release/SBOM_AND_PROVENANCE_PLAN.md") + text("docs/release/RELEASE_ARTIFACT_INTEGRITY_PLAN.md")
+    combined = (
+        text("docs/release/V0_1_0_ALPHA_CHECKSUMS.md")
+        + text("docs/release/V0_1_0_ALPHA_VERIFICATION.md")
+        + text("docs/release/PUBLIC_ALPHA_GO_NO_GO.md")
+        + text("docs/release/CERTAMERGE_PUBLIC_RELEASE_CANDIDATE_REPORT.md")
+    )
     assert required_phrase in combined

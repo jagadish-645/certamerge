@@ -19,5 +19,8 @@ venv/
 *.log
 *.tmp
 .tmp/
+_tmp/
+_internal/
+_backups/
 samples/cars/local-demo.json
 samples/cars/command-demo.json

@@ -1,0 +1,46 @@
+name: Feature request
+description: Propose a community alpha improvement
+title: "[Feature]: "
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        CertaMerge is not a chatbot, scanner replacement, dashboard-first tool, or compliance certification product. Feature requests should strengthen evidence collection, risk classification, deterministic policy decisions, or CAR/proof verification.
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+      description: What proof, policy, or workflow gap does this solve?
+    validations:
+      required: true
+  - type: textarea
+    id: proposed
+    attributes:
+      label: Proposed behavior
+      description: Describe the expected user-facing output or workflow.
+    validations:
+      required: true
+  - type: dropdown
+    id: primitive
+    attributes:
+      label: Core primitive strengthened
+      options:
+        - Evidence collection
+        - Risk or blast-radius classification
+        - Deterministic policy decision
+        - CAR/proof verification
+        - Documentation or sample clarity
+    validations:
+      required: true
+  - type: checkboxes
+    id: boundaries
+    attributes:
+      label: Boundary check
+      options:
+        - label: This does not require LLM-authoritative verdicts.
+          required: true
+        - label: This does not require source-code egress by default.
+          required: true
+        - label: This does not claim compliance certification or production safety.
+          required: true
