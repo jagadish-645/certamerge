@@ -1,0 +1,46 @@
+name: CertaMerge Proof Gate
+
+on:
+  pull_request:
+  workflow_dispatch:
+    inputs:
+      fail_on_block:
+        description: Fail job when CertaMerge produces a blocking verdict.
+        required: false
+        default: "false"
+        type: choice
+        options:
+          - "false"
+          - "true"
+
+permissions:
+  contents: read
+
+jobs:
+  certamerge-proof:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Run CertaMerge on this repository
+        id: certamerge
+        uses: ./community/github-action
+        with:
+          policy: .certamerge.yml
+          repo: .
+          output: .tmp/certamerge-pr.car.json
+          artifact-name: certamerge-pr-car
+          fail-on-block: ${{ github.event_name == 'workflow_dispatch' && inputs.fail_on_block || 'false' }}
+
+      - name: Verify generated CAR
+        run: python -m certamerge verify-car .tmp/certamerge-pr.car.json
+
+      - name: Write proof summary
+        run: |
+          {
+            echo "## CertaMerge Proof Gate"
+            echo ""
+            echo "- Verdict: ${{ steps.certamerge.outputs.verdict }}"
+            echo "- CAR artifact: certamerge-pr-car"
+            echo "- Verification: python -m certamerge verify-car .tmp/certamerge-pr.car.json"
+          } >> "$GITHUB_STEP_SUMMARY"

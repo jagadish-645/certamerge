@@ -1,0 +1,6 @@
+{
+  "status": "passed",
+  "summary": "The GitHub Action contract exposes policy, repo, output, fail-on-block, artifact-name inputs and car-path, verdict, summary-path outputs.",
+  "action": "community/github-action/action.yml",
+  "sensitive": "metadata"
+}

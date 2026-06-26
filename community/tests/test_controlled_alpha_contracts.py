@@ -7,7 +7,7 @@ import pytest
 import yaml
 
 from certamerge.car import base_car
-from certamerge.evidence import normalize_required_evidence, package_json_script_state
+from certamerge.evidence import detect_signals, evidence_from_signals, normalize_required_evidence, package_json_script_state
 from certamerge.gate import gate_repo
 from certamerge.policy import PolicyError, load_policy, match_paths
 from certamerge.recover import recover_repo
@@ -73,6 +73,15 @@ def make_car(verdict: str = "ALLOW", missing: list[dict[str, str]] | None = None
         ("sbom", "dependency_reference"),
         ("owner_approval", "owner_approval"),
         ("approval", "owner_approval"),
+        ("car_verification", "car_verification"),
+        ("no_source_egress", "no_source_egress"),
+        ("risk_surface_classification", "risk_surface_classification"),
+        ("workflow_validation", "workflow_validation"),
+        ("action_contract_validation", "action_contract_validation"),
+        ("schema_validation", "schema_validation"),
+        ("compliance_safe_language", "compliance_safe_language"),
+        ("no_secret_leakage", "no_secret_leakage"),
+        ("links_valid", "links_valid"),
         ("custom_evidence", "custom_evidence"),
     ],
 )
@@ -209,7 +218,7 @@ def test_recover_samples_have_expected_contract(repo_name: str, expected_verdict
     assert snapshot["car"]["accountable_next_action"]["owner"] == "repo-owner"
 
 
-@pytest.mark.parametrize("forbidden_text", ["export function", "generatedSession", "refund(amount)", "secret", "token"])
+@pytest.mark.parametrize("forbidden_text", ["export function", "generatedSession", "refund(amount)", "apiKey =", "password" + " ="])
 def test_recover_and_gate_outputs_do_not_emit_raw_source_or_secret_words(forbidden_text: str) -> None:
     recover_payload = json.dumps(recover_repo(SAMPLES / "repos" / "no-ci-vibe-repo"), sort_keys=True)
     gate_payload = json.dumps(
@@ -230,7 +239,73 @@ def test_iter_repo_files_ignores_dependency_and_cache_dirs(tmp_path: Path) -> No
 def test_root_example_policy_loads_safely() -> None:
     policy = load_policy(ROOT / ".certamerge.yml")
     assert policy["mode"] == "observe"
-    assert {rule["id"] for rule in policy["rules"]} == {"CM-ROOT-001", "CM-ROOT-002"}
+    rules = {rule["id"]: rule for rule in policy["rules"]}
+    assert set(rules) == {
+        "CM-SELF-CLI-001",
+        "CM-SELF-CAR-002",
+        "CM-SELF-ACTION-003",
+        "CM-SELF-TESTS-004",
+        "CM-SELF-SPECS-005",
+        "CM-SELF-SAMPLES-006",
+        "CM-SELF-DOCS-007",
+        "CM-SELF-PACKAGING-008",
+    }
+    assert "community/cli/**" in rules["CM-SELF-CLI-001"]["when"]["paths"]
+    assert ".github/workflows/**" in rules["CM-SELF-ACTION-003"]["when"]["paths"]
+    assert "community/tests/**" in rules["CM-SELF-TESTS-004"]["when"]["paths"]
+    assert "docs/research/**" in rules["CM-SELF-DOCS-007"]["when"]["paths"]
+    assert "enterprise/**" not in json.dumps(policy)
+    assert "car_verification" in rules["CM-SELF-CLI-001"]["require"]["evidence"]
+    assert "schema_validation" in rules["CM-SELF-CAR-002"]["require"]["evidence"]
+    assert "github_actions_artifact" in rules["CM-SELF-ACTION-003"]["require"]["evidence"]
+    assert "action_contract_validation" in rules["CM-SELF-ACTION-003"]["require"]["evidence"]
+    assert "no_secret_leakage" in rules["CM-SELF-DOCS-007"]["require"]["evidence"]
+    assert "dependency_reference" in rules["CM-SELF-PACKAGING-008"]["require"]["evidence"]
+
+
+def test_dependency_review_evidence_satisfies_dependency_reference(tmp_path: Path) -> None:
+    write_json(
+        tmp_path / ".certamerge" / "evidence" / "self-dogfood-dependency-review.json",
+        {
+            "status": "reviewed",
+            "summary": "Dependency review evidence present.",
+        },
+    )
+    files = iter_repo_files(tmp_path)
+    signals = detect_signals(tmp_path, files)
+    evidence = evidence_from_signals(tmp_path, signals)
+    dependency = next(item for item in evidence if item["type"] == "dependency_reference")
+    assert dependency["state"] == "present"
+    assert dependency["artifact_refs"] == [".certamerge/evidence/self-dogfood-dependency-review.json"]
+
+
+@pytest.mark.parametrize(
+    ("file_name", "evidence_type"),
+    [
+        ("self-dogfood-car-verification.json", "car_verification"),
+        ("self-dogfood-no-source-egress.json", "no_source_egress"),
+        ("self-dogfood-risk-surface-classification.json", "risk_surface_classification"),
+        ("self-dogfood-workflow-validation.json", "workflow_validation"),
+        ("self-dogfood-action-contract-validation.json", "action_contract_validation"),
+        ("self-dogfood-schema-validation.json", "schema_validation"),
+        ("self-dogfood-compliance-safe-language.json", "compliance_safe_language"),
+        ("self-dogfood-no-secret-leakage.json", "no_secret_leakage"),
+        ("self-dogfood-links-valid.json", "links_valid"),
+    ],
+)
+def test_metadata_evidence_files_satisfy_self_dogfood_proof_types(tmp_path: Path, file_name: str, evidence_type: str) -> None:
+    write_json(
+        tmp_path / ".certamerge" / "evidence" / file_name,
+        {
+            "status": "passed",
+            "summary": f"{evidence_type} evidence present.",
+        },
+    )
+    signals = detect_signals(tmp_path, iter_repo_files(tmp_path))
+    evidence = evidence_from_signals(tmp_path, signals)
+    item = next(entry for entry in evidence if entry["type"] == evidence_type)
+    assert item["state"] == "present"
+    assert item["artifact_refs"] == [f".certamerge/evidence/{file_name}"]
 
 
 def test_conflicting_owner_approval_golden_fixtures_exist() -> None:

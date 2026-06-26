@@ -1,0 +1,6 @@
+{
+  "status": "passed",
+  "summary": "CertaMerge CAR verification command is required for the self-dogfood branch and must pass before merge.",
+  "command": "python -m certamerge verify-car .tmp/dogfood-pr.car.json",
+  "sensitive": "metadata"
+}

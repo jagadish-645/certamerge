@@ -122,6 +122,17 @@ OBSERVE_ONLY_WOULD_BLOCK
 
 This sample demonstrates the safe rollout posture: CertaMerge can show what would block without breaking a team during initial adoption.
 
+## Run CertaMerge On CertaMerge
+
+This repository includes a self-dogfood observe-mode policy:
+
+```powershell
+python -m certamerge gate --repo . --policy .certamerge.yml --output .tmp/certamerge-pr.car.json
+python -m certamerge verify-car .tmp/certamerge-pr.car.json
+```
+
+The output should still follow the same grammar: verdict, policy reason, missing proof, accountable next action, and CAR.
+
 ## Data Boundary
 
 CertaMerge Community runs locally. It reads repository metadata, selected configuration files, and evidence references. It does not send source code, raw diffs, tokens, or CARs to a vendor service by default.
@@ -132,4 +143,5 @@ CertaMerge Community runs locally. It reads repository metadata, selected config
 - [CAR integrity](car-integrity.md)
 - [No source egress](no-source-egress.md)
 - [GitHub Action](github-action.md)
+- [Self-dogfooding](self-dogfooding.md)
 - [Policies](policies.md)

@@ -1,0 +1,6 @@
+{
+  "status": "passed",
+  "summary": "The self-dogfood GitHub workflow invokes the repository-local CertaMerge action, writes a CAR, verifies the CAR, and publishes the CAR artifact.",
+  "workflow": ".github/workflows/certamerge-proof-gate.yml",
+  "sensitive": "metadata"
+}

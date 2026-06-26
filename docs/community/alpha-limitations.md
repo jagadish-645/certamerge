@@ -30,6 +30,7 @@ Community alpha is not intended for:
 | CAR integrity | SHA-256 content hash over canonical CAR content is implemented and verified. | Local tampering can be detected, but CARs are not cryptographically signed. |
 | Signing keys | Signing-key lifecycle is specified, not implemented. | Do not claim non-repudiation or signer identity proof. |
 | GitHub Action | Composite action metadata, static contract tests, and sample live-validation paths exist. | It is suitable for proof-only experiments, not production branch-protection enforcement. |
+| Self-dogfooding | The public repo has an observe-mode `.certamerge.yml` and PR workflow. | It proves CertaMerge can govern its own alpha changes, but it is not yet a production branch-protection guarantee. |
 | Evidence adapters | Basic local adapters and SARIF/test/approval state handling exist. | Deep scanner-specific parsing remains limited. |
 | Policy engine | YAML policy parsing and deterministic evaluation exist. | Policy language is intentionally small and may change before stable release. |
 | Recovery | Local Recover detects proof gaps from repo metadata and evidence files. | It is not a complete production readiness assessment. |

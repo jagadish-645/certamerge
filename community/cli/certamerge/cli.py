@@ -25,7 +25,11 @@ def verify_car(path: Path) -> None:
 
 @app.command()
 def explain_car(path: Path) -> None:
-    typer.echo(explain_car_text(path))
+    try:
+        typer.echo(explain_car_text(path))
+    except ValueError as exc:
+        typer.echo(f"Error: {exc}", err=True)
+        raise typer.Exit(code=1) from exc
 
 
 @app.command()

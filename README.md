@@ -118,6 +118,7 @@ See:
 - [Alpha limitations](docs/community/alpha-limitations.md)
 - [CAR integrity](docs/community/car-integrity.md)
 - [No source egress](docs/community/no-source-egress.md)
+- [Self-dogfooding](docs/community/self-dogfooding.md)
 - [5-minute demo](docs/demo/5_MINUTE_PUBLIC_ALPHA_DEMO.md)
 - [GitHub Action validation](docs/community/github-action-validation.md)
 

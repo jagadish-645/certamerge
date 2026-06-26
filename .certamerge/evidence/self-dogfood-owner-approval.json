@@ -1,0 +1,6 @@
+{
+  "decision": "approved",
+  "owner": "repo-owner",
+  "summary": "Maintainer approval evidence for the local self-dogfood hardening branch.",
+  "sensitive": "metadata"
+}

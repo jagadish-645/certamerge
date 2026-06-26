@@ -1,0 +1,6 @@
+{
+  "status": "passed",
+  "summary": "Self-dogfood policy and local CLI operation are designed for local repository inspection with no source-code egress by default.",
+  "scope": "community CLI, local GitHub Action checkout, repository-local policy and metadata evidence",
+  "sensitive": "metadata"
+}

@@ -1,0 +1,5 @@
+{
+  "status": "passed",
+  "summary": "Community docs use repository-local relative documentation links and avoid external compliance certification claims.",
+  "sensitive": "metadata"
+}

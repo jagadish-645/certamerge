@@ -1,29 +1,120 @@
 version: 0.1
 mode: observe
 rules:
-  - id: CM-ROOT-001
+  - id: CM-SELF-CLI-001
     when:
       paths:
-        - "community/**"
-        - "enterprise/**"
-        - "specs/**"
+        - "community/cli/**"
     require:
       evidence:
         - tests
-        - ci
+        - ci_status
+        - car_verification
+        - no_source_egress
+        - risk_surface_classification
+        - owner_approval
     verdict_if_missing: NEEDS_EVIDENCE
-    severity: medium
-    reason: "Core CertaMerge changes require test and CI proof before release."
-  - id: CM-ROOT-002
+    severity: high
+    reason: "Community CLI and verifier changes require passing tests, CI proof, CAR verification, no-source-egress proof, risk classification, and maintainer approval evidence."
+  - id: CM-SELF-CAR-002
     when:
       paths:
-        - "community/cli/certamerge/verifier.py"
         - "community/cli/certamerge/car.py"
+        - "community/cli/certamerge/verifier.py"
+        - "community/cli/certamerge/schema.py"
         - "specs/car/**"
     require:
       evidence:
         - tests
+        - ci_status
+        - car_verification
+        - schema_validation
         - owner_approval
     verdict_if_missing: ESCALATE
     severity: high
-    reason: "CAR integrity changes require tests and owner approval."
+    reason: "CAR and verifier integrity changes require tests, CI proof, CAR verification, schema validation, and explicit maintainer approval."
+  - id: CM-SELF-ACTION-003
+    when:
+      paths:
+        - "community/github-action/**"
+        - ".github/workflows/**"
+    require:
+      evidence:
+        - tests
+        - ci_status
+        - workflow_validation
+        - action_contract_validation
+        - github_actions_artifact
+        - owner_approval
+    verdict_if_missing: NEEDS_EVIDENCE
+    severity: high
+    reason: "GitHub Action and workflow changes require test proof, CI proof, workflow validation, action contract validation, action artifact evidence, and maintainer approval."
+  - id: CM-SELF-TESTS-004
+    when:
+      paths:
+        - "community/tests/**"
+    require:
+      evidence:
+        - tests
+        - ci_status
+        - car_verification
+    verdict_if_missing: NEEDS_EVIDENCE
+    severity: medium
+    reason: "Test changes require the test suite, CI proof, and CAR verification so the self-gate evidence remains trustworthy."
+  - id: CM-SELF-SPECS-005
+    when:
+      paths:
+        - "specs/**"
+    require:
+      evidence:
+        - tests
+        - ci_status
+        - schema_validation
+    verdict_if_missing: NEEDS_EVIDENCE
+    severity: medium
+    reason: "Specification changes require tests, CI proof, and schema validation so documented contracts stay executable."
+  - id: CM-SELF-SAMPLES-006
+    when:
+      paths:
+        - "samples/**"
+    require:
+      evidence:
+        - tests
+        - ci_status
+        - schema_validation
+    verdict_if_missing: NEEDS_EVIDENCE
+    severity: medium
+    reason: "Sample repositories, policies, evidence, and CARs require tests, CI proof, and schema validation because they are executable user examples."
+  - id: CM-SELF-DOCS-007
+    when:
+      paths:
+        - "README.md"
+        - "SECURITY.md"
+        - "CONTRIBUTING.md"
+        - "docs/community/**"
+        - "docs/demo/**"
+        - "docs/release/**"
+        - "docs/research/**"
+    require:
+      evidence:
+        - ci_status
+        - security_doc
+        - compliance_safe_language
+        - no_secret_leakage
+        - links_valid
+    verdict_if_missing: NEEDS_EVIDENCE
+    severity: medium
+    reason: "Public docs require CI proof, security-policy presence, compliance-safe language, no-secret-leakage proof, and link validation to avoid unsafe claims or contributor confusion."
+  - id: CM-SELF-PACKAGING-008
+    when:
+      paths:
+        - "pyproject.toml"
+        - "LICENSE"
+    require:
+      evidence:
+        - tests
+        - ci_status
+        - dependency_reference
+    verdict_if_missing: NEEDS_EVIDENCE
+    severity: high
+    reason: "Packaging and license changes require tests, CI proof, and dependency/package metadata evidence."

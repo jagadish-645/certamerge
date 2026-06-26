@@ -13,6 +13,8 @@ from .schema import CAR_SCHEMA, EVIDENCE_STATES
 def load_car(path: Path) -> dict[str, Any]:
     try:
         data = json.loads(path.read_text(encoding="utf-8"))
+    except OSError as exc:
+        raise ValueError(f"CAR file could not be read: {exc}") from exc
     except json.JSONDecodeError as exc:
         raise ValueError(f"CAR JSON could not be parsed: {exc}") from exc
     if not isinstance(data, dict):

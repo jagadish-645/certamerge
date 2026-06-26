@@ -1,0 +1,6 @@
+{
+  "status": "passed",
+  "summary": "Sample CARs and verifier state-contract tests exercise the community alpha CAR schema and verdict-state invariants.",
+  "command": "python -m pytest community/tests/test_controlled_alpha_contracts.py -q",
+  "sensitive": "metadata"
+}

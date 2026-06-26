@@ -23,6 +23,15 @@ REQUIRED_EVIDENCE_ALIASES = {
     "owner_approval": "owner_approval",
     "approval": "owner_approval",
     "github_actions_artifact": "github_actions_artifact",
+    "car_verification": "car_verification",
+    "no_source_egress": "no_source_egress",
+    "risk_surface_classification": "risk_surface_classification",
+    "workflow_validation": "workflow_validation",
+    "action_contract_validation": "action_contract_validation",
+    "schema_validation": "schema_validation",
+    "compliance_safe_language": "compliance_safe_language",
+    "no_secret_leakage": "no_secret_leakage",
+    "links_valid": "links_valid",
 }
 
 
@@ -97,6 +106,15 @@ def package_json_script_state(repo: Path, script: str) -> str:
     return "present"
 
 
+def _metadata_evidence_refs(names: list[str], *needles: str) -> list[str]:
+    refs = []
+    for name in names:
+        normalized = name.lower().replace("_", "-")
+        if name.startswith(".certamerge/evidence/") and any(needle in normalized for needle in needles):
+            refs.append(name)
+    return refs
+
+
 def detect_signals(repo: Path, files: list[Path]) -> dict[str, Any]:
     names = [p.as_posix() for p in files]
     package = _package_json(repo) or {}
@@ -117,7 +135,23 @@ def detect_signals(repo: Path, files: list[Path]) -> dict[str, Any]:
         ],
         "sarif_files": [name for name in names if name.endswith(".sarif")],
         "sbom_refs": [name for name in names if "sbom" in name.lower() and (name.endswith(".json") or name.endswith(".xml"))],
+        "dependency_review_refs": [
+            name
+            for name in names
+            if name.startswith(".certamerge/evidence/")
+            and "dependency" in name.lower()
+            and (name.endswith(".json") or name.endswith(".xml"))
+        ],
         "owner_approval_refs": [name for name in names if name.startswith(".certamerge/evidence/") and "approval" in name.lower()],
+        "car_verification_refs": _metadata_evidence_refs(names, "car-verification"),
+        "no_source_egress_refs": _metadata_evidence_refs(names, "no-source-egress"),
+        "risk_surface_classification_refs": _metadata_evidence_refs(names, "risk-surface"),
+        "workflow_validation_refs": _metadata_evidence_refs(names, "workflow-validation"),
+        "action_contract_validation_refs": _metadata_evidence_refs(names, "action-contract"),
+        "schema_validation_refs": _metadata_evidence_refs(names, "schema-validation"),
+        "compliance_safe_language_refs": _metadata_evidence_refs(names, "compliance-safe-language"),
+        "no_secret_leakage_refs": _metadata_evidence_refs(names, "no-secret-leakage"),
+        "links_valid_refs": _metadata_evidence_refs(names, "links-valid"),
         "readme": ["README.md"] if "README.md" in names else [],
         "contributing": ["CONTRIBUTING.md"] if "CONTRIBUTING.md" in names else [],
         "security": ["SECURITY.md"] if "SECURITY.md" in names else [],
@@ -243,6 +277,7 @@ def evidence_from_signals(repo: Path, signals: dict[str, Any]) -> list[dict[str,
     lint_refs = list(signals.get("lint_refs", []))
     lock_refs = list(signals.get("lockfiles", []))
     sbom_refs = list(signals.get("sbom_refs", []))
+    dependency_review_refs = list(signals.get("dependency_review_refs", []))
     evidence = [
         _fact("ci_status", "present" if ci_refs else "missing", "CI configuration present." if ci_refs else "CI status evidence is missing.", ci_refs),
         _test_result_fact(repo, signals.get("test_script_state", "missing"), test_refs, test_result_refs),
@@ -250,13 +285,69 @@ def evidence_from_signals(repo: Path, signals: dict[str, Any]) -> list[dict[str,
         _sarif_fact(repo, list(signals.get("sarif_files", []))),
         _fact(
             "dependency_reference",
-            "present" if lock_refs or sbom_refs else "missing",
-            "Dependency lockfile or SBOM reference present." if lock_refs or sbom_refs else "Dependency/SBOM reference evidence is missing.",
-            lock_refs + sbom_refs,
+            "present" if lock_refs or sbom_refs or dependency_review_refs else "missing",
+            "Dependency lockfile, SBOM, or dependency review evidence reference present."
+            if lock_refs or sbom_refs or dependency_review_refs
+            else "Dependency/SBOM reference evidence is missing.",
+            lock_refs + sbom_refs + dependency_review_refs,
         ),
         _owner_approval_fact(repo, list(signals.get("owner_approval_refs", []))),
         _fact("github_actions_artifact", "present" if ci_refs else "missing", "GitHub Actions workflow reference present." if ci_refs else "GitHub Actions artifact/reference evidence is missing.", ci_refs),
         _fact("security_doc", "present" if signals.get("security") else "missing", "Security policy document present." if signals.get("security") else "Security policy document is missing.", list(signals.get("security", []))),
+        _fact(
+            "car_verification",
+            "present" if signals.get("car_verification_refs") else "missing",
+            "CAR verification evidence is present." if signals.get("car_verification_refs") else "CAR verification evidence is missing.",
+            list(signals.get("car_verification_refs", [])),
+        ),
+        _fact(
+            "no_source_egress",
+            "present" if signals.get("no_source_egress_refs") else "missing",
+            "No-source-egress evidence is present." if signals.get("no_source_egress_refs") else "No-source-egress evidence is missing.",
+            list(signals.get("no_source_egress_refs", [])),
+        ),
+        _fact(
+            "risk_surface_classification",
+            "present" if signals.get("risk_surface_classification_refs") else "missing",
+            "Risk surface classification evidence is present." if signals.get("risk_surface_classification_refs") else "Risk surface classification evidence is missing.",
+            list(signals.get("risk_surface_classification_refs", [])),
+        ),
+        _fact(
+            "workflow_validation",
+            "present" if signals.get("workflow_validation_refs") else "missing",
+            "Workflow validation evidence is present." if signals.get("workflow_validation_refs") else "Workflow validation evidence is missing.",
+            list(signals.get("workflow_validation_refs", [])),
+        ),
+        _fact(
+            "action_contract_validation",
+            "present" if signals.get("action_contract_validation_refs") else "missing",
+            "Action contract validation evidence is present." if signals.get("action_contract_validation_refs") else "Action contract validation evidence is missing.",
+            list(signals.get("action_contract_validation_refs", [])),
+        ),
+        _fact(
+            "schema_validation",
+            "present" if signals.get("schema_validation_refs") else "missing",
+            "Schema validation evidence is present." if signals.get("schema_validation_refs") else "Schema validation evidence is missing.",
+            list(signals.get("schema_validation_refs", [])),
+        ),
+        _fact(
+            "compliance_safe_language",
+            "present" if signals.get("compliance_safe_language_refs") else "missing",
+            "Compliance-safe-language evidence is present." if signals.get("compliance_safe_language_refs") else "Compliance-safe-language evidence is missing.",
+            list(signals.get("compliance_safe_language_refs", [])),
+        ),
+        _fact(
+            "no_secret_leakage",
+            "present" if signals.get("no_secret_leakage_refs") else "missing",
+            "No-secret-leakage evidence is present." if signals.get("no_secret_leakage_refs") else "No-secret-leakage evidence is missing.",
+            list(signals.get("no_secret_leakage_refs", [])),
+        ),
+        _fact(
+            "links_valid",
+            "present" if signals.get("links_valid_refs") else "missing",
+            "Link validation evidence is present." if signals.get("links_valid_refs") else "Link validation evidence is missing.",
+            list(signals.get("links_valid_refs", [])),
+        ),
     ]
     return evidence
 
