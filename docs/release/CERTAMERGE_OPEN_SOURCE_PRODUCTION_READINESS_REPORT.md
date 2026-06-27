@@ -8,7 +8,7 @@ Primary PR: #4 `evolution: make CertaMerge repo-adaptive beyond self-dogfood`
 
 ## Executive Summary
 
-CertaMerge Community Alpha is release-ready as an open-source alpha after the PR #4 hardening pass, provided the final report commit receives the same passing GitHub checks and PR #4 is merged cleanly.
+CertaMerge Community Alpha is release-ready as an open-source alpha after the PR #4 hardening pass. PR #4 was merged into `main`, the superseded draft PRs were closed, GitHub checks passed, and the merged `main` branch produced a valid self-gate CAR.
 
 This is not an enterprise production-readiness claim. The release-ready scope is the community alpha surface:
 
@@ -77,6 +77,7 @@ Results:
 | Build | Passed |
 | Twine check | Passed |
 | Checksum generation | Passed |
+| `pip check` | Passed in GitHub CI; local global Python environment has an unrelated `opencv-python` / `numpy` conflict outside CertaMerge dependencies |
 
 Generated final self-gate CAR:
 
@@ -90,9 +91,47 @@ Verified verdict:
 OBSERVE_ONLY_WOULD_ALLOW
 ```
 
+## Post-Merge Main-Branch Evidence
+
+Merged `main` commit:
+
+```text
+ccd5c9b evolution: make CertaMerge repo-adaptive beyond self-dogfood
+```
+
+Post-merge smoke commands passed on `main`:
+
+```powershell
+python -m pip install -e .
+python -m certamerge --help
+python -m certamerge recover .
+python -m certamerge recover . --suggest-policy
+python -m certamerge suggest-policy . --output .tmp/self.postmerge.suggested.certamerge.yml
+python -m certamerge gate --repo . --policy .certamerge.yml --output .tmp/open-source-main.car.json
+python -m certamerge verify-car .tmp/open-source-main.car.json
+python -m certamerge explain-car .tmp/open-source-main.car.json
+python -m pytest -q
+python -m pytest --collect-only -q
+python -m compileall community scripts
+python -m build
+python -m twine check dist\*
+```
+
+Post-merge self-gate verdict:
+
+```text
+OBSERVE_ONLY_WOULD_ALLOW
+```
+
+Post-merge CAR verification:
+
+```text
+valid: true
+```
+
 ## Remote GitHub Gate Evidence
 
-PR #4 remote checks passed after the hardening push at commit `bf88830`:
+PR #4 remote checks passed before merge:
 
 | GitHub check | Result |
 |---|---|
@@ -100,7 +139,7 @@ PR #4 remote checks passed after the hardening push at commit `bf88830`:
 | `CertaMerge CI / test (3.12)` | success |
 | `CertaMerge Proof Gate / certamerge-proof` | success |
 
-The final report commit must pass the same checks before merge.
+PR #4 was then merged into `main`.
 
 ## PR-Diff-Aware Proof
 
@@ -211,15 +250,15 @@ Still not included:
 
 These are not blockers for community alpha release readiness, but they are blockers for any enterprise production-readiness claim.
 
-## PR Resolution Plan
+## PR Resolution Outcome
 
-After this final report commit passes GitHub checks:
+Resolved PR state:
 
-1. Mark PR #4 ready for review.
-2. Merge PR #4.
-3. Sync local `main`.
-4. Run smoke commands on `main`.
-5. Close PR #2 and PR #3 as superseded.
+| PR | Outcome |
+|---|---|
+| #4 `evolution: make CertaMerge repo-adaptive beyond self-dogfood` | Merged |
+| #3 `dogfood: use CertaMerge to govern its own public alpha repo` | Closed as superseded by PR #4 |
+| #2 `docs: professionalize public README` | Closed as superseded by PR #4 |
 
 ## Final Open-Source Verdict
 
