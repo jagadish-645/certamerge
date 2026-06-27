@@ -1,0 +1,14 @@
+{
+  "name": "node-typescript-app-fixture",
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "test": "node --test __tests__/session.test.ts",
+    "build": "tsc --noEmit",
+    "lint": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@types/node": "20.11.30",
+    "typescript": "5.4.5"
+  }
+}

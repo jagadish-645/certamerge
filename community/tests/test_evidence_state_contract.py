@@ -149,6 +149,42 @@ def test_stale_owner_approval_stays_needs_evidence(tmp_path: Path) -> None:
     assert result["missing_proof"][0]["state"] == "stale"
 
 
+def test_unavailable_test_evidence_stays_needs_evidence(tmp_path: Path) -> None:
+    repo = make_repo(tmp_path)
+    write_data(repo / ".certamerge" / "evidence" / "test-result.json", {"status": "unavailable"})
+    policy = tmp_path / "policy.yml"
+    write_policy(policy, "tests")
+
+    result = gate_repo(repo, policy)
+
+    assert result["verdict"] == "NEEDS_EVIDENCE"
+    assert result["missing_proof"][0]["state"] == "unavailable"
+
+
+def test_insufficient_test_evidence_stays_needs_evidence(tmp_path: Path) -> None:
+    repo = make_repo(tmp_path)
+    write_data(repo / ".certamerge" / "evidence" / "test-result.json", {"summary": "test evidence exists but no status is present"})
+    policy = tmp_path / "policy.yml"
+    write_policy(policy, "tests")
+
+    result = gate_repo(repo, policy)
+
+    assert result["verdict"] == "NEEDS_EVIDENCE"
+    assert result["missing_proof"][0]["state"] == "insufficient"
+
+
+def test_unavailable_owner_approval_stays_needs_evidence(tmp_path: Path) -> None:
+    repo = make_repo(tmp_path)
+    write_data(repo / ".certamerge" / "evidence" / "owner-approval.json", {"owner": "auth-owner", "decision": "unavailable"})
+    policy = tmp_path / "policy.yml"
+    write_policy(policy, "owner_approval")
+
+    result = gate_repo(repo, policy)
+
+    assert result["verdict"] == "NEEDS_EVIDENCE"
+    assert result["missing_proof"][0]["state"] == "unavailable"
+
+
 def test_conflicting_owner_approval_blocks_and_records_conflict(tmp_path: Path) -> None:
     repo = make_repo(tmp_path)
     write_data(repo / ".certamerge" / "evidence" / "owner-approval-a.json", {"owner": "auth-owner", "decision": "approved"})

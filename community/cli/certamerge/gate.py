@@ -39,6 +39,7 @@ def gate_repo(repo: Path, policy_path: Path, output: Path | None = None) -> dict
         },
         owner=owner,
         next_action=next_action,
+        policy_path=policy_path,
     )
     if output:
         write_json(output, car)

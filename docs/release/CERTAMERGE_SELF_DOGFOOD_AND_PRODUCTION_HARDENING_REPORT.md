@@ -142,7 +142,7 @@ Observed local results:
 - Compileall: passed
 - Build: wheel and source distribution built successfully
 - Enterprise checkout smoke: `7 passed`
-- Residue scan: no local-path, Codex-residue, scaffold-marker, or token-looking strings in public tracked content
+- Residue scan: no local-path, tooling-residue, scaffold-marker, or token-looking strings in public tracked content
 
 `python -m pip check` reports an unrelated machine-level `opencv-python` and `numpy` version conflict. CertaMerge does not depend on either package.
 

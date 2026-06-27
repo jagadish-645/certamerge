@@ -15,6 +15,8 @@ Every generated CAR includes an `integrity` object with:
 
 The content hash is computed from the canonical JSON representation of the CAR with the `integrity` object excluded. This lets the verifier detect local tampering after the CAR was written.
 
+Gate-generated CARs also include change-bound policy and evidence metadata when those inputs are available. See [Change-bound proof](change-bound-proof.md).
+
 ## Verifier Checks
 
 `python -m certamerge verify-car path/to/car.json` checks:
@@ -28,7 +30,9 @@ The content hash is computed from the canonical JSON representation of the CAR w
 - `NEEDS_EVIDENCE` must carry missing proof;
 - `REPAIR_REQUIRED` must carry repair missions;
 - `OVERRIDE_RECORDED` must use the override record state;
-- content-hash mismatch after CAR tampering.
+- content-hash mismatch after CAR tampering;
+- policy file hash mismatch after policy mutation;
+- evidence artifact hash mismatch after evidence mutation.
 
 ## What This Protects
 
@@ -38,7 +42,9 @@ The current integrity model helps detect:
 - manual edits to verdict text;
 - manual edits to evidence states;
 - manual edits to missing proof;
-- manual edits to repair missions or policy trace.
+- manual edits to repair missions or policy trace;
+- policy file changes after CAR creation;
+- evidence file changes after CAR creation.
 
 ## What This Does Not Protect Yet
 

@@ -45,7 +45,7 @@ Expected Recover shape:
 
 ```text
 Verdict: NEEDS_EVIDENCE
-Policy reason: Recover checks basic proof signals without claiming security correctness.
+Policy reason: Recover checks repo-adaptive proof signals without claiming security correctness.
 Missing proof: test_result, ci_status, owner_approval
 Accountable next action: repo-owner - Review generated repair missions and rerun CertaMerge after evidence is present.
 ```

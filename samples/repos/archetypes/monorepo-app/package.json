@@ -1,0 +1,12 @@
+{
+  "name": "monorepo-app-fixture",
+  "private": true,
+  "scripts": {
+    "test": "node packages/core/tests/core.test.js",
+    "build": "node packages/core/src/index.js"
+  },
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ]
+}

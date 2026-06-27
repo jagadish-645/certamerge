@@ -28,6 +28,28 @@ def write_json(path: Path, value: object) -> None:
     path.write_text(json.dumps(value, indent=2) + "\n", encoding="utf-8")
 
 
+def write_minimal_policy(path: Path, evidence: list[str] | None = None) -> None:
+    write_text(
+        path,
+        yaml.safe_dump(
+            {
+                "version": 0.1,
+                "mode": "observe",
+                "rules": [
+                    {
+                        "id": "CHANGE-001",
+                        "when": {},
+                        "require": {"evidence": evidence or ["tests"]},
+                        "verdict_if_missing": "NEEDS_EVIDENCE",
+                        "reason": "Changes require bound proof evidence.",
+                    }
+                ],
+            },
+            sort_keys=False,
+        ),
+    )
+
+
 def valid_policy() -> dict[str, str]:
     return {
         "policy_id": "test",
@@ -93,14 +115,29 @@ def test_required_evidence_aliases_are_stable(alias: str, expected: str) -> None
     ("files", "expected"),
     [
         ([Path("package.json")], "node"),
-        ([Path("pyproject.toml")], "python"),
-        ([Path("requirements.txt")], "python"),
+        ([Path("pyproject.toml")], "python-library"),
+        ([Path("requirements.txt")], "python-library"),
         ([Path("go.mod")], "go"),
+        ([Path("action.yml")], "github-action-repo"),
+        ([Path("main.tf")], "terraform-iac-repo"),
+        ([Path("apps/web/src/index.ts"), Path("packages/core/src/index.ts"), Path("package.json")], "monorepo-app"),
+        ([Path("mkdocs.yml"), Path("docs/index.md")], "docs-heavy-repo"),
+        ([Path("package.json"), Path("tsconfig.json"), Path("src/index.ts")], "node-typescript-app"),
         ([Path("README.md")], "unknown"),
     ],
 )
 def test_project_type_detection(files: list[Path], expected: str) -> None:
     assert detect_project_type(files) == expected
+
+
+def test_project_type_ignores_nested_sample_fixtures_for_root_profile() -> None:
+    files = [
+        Path("pyproject.toml"),
+        Path("community/cli/certamerge/cli.py"),
+        Path("samples/repos/archetypes/terraform-iac-repo/main.tf"),
+        Path("samples/repos/archetypes/github-action-repo/action.yml"),
+    ]
+    assert detect_project_type(files) == "python-library"
 
 
 @pytest.mark.parametrize(
@@ -115,10 +152,26 @@ def test_project_type_detection(files: list[Path], expected: str) -> None:
         ("app/generated/client.ts", "generated_code"),
         ("src/login/oauth.ts", "auth"),
         ("billing/stripe-webhook.ts", "payments"),
+        ("main.tf", "iac"),
+        ("action.yml", "github_action"),
+        ("docs/index.md", "docs"),
     ],
 )
 def test_risk_surface_detection(file_name: str, expected_surface: str) -> None:
     assert expected_surface in detect_risk_surfaces([Path(file_name)])
+
+
+def test_risk_surface_detection_ignores_nested_sample_fixtures_for_root_profile() -> None:
+    files = [
+        Path("pyproject.toml"),
+        Path("community/cli/certamerge/cli.py"),
+        Path("samples/repos/archetypes/terraform-iac-repo/main.tf"),
+        Path("samples/repos/archetypes/node-typescript-app/src/auth/session.ts"),
+    ]
+    surfaces = detect_risk_surfaces(files)
+    assert "dependency" in surfaces
+    assert "iac" not in surfaces
+    assert "auth" not in surfaces
 
 
 @pytest.mark.parametrize(
@@ -204,13 +257,13 @@ def test_sample_cars_verify(sample_name: str, expected_valid: bool) -> None:
 
 @pytest.mark.parametrize(
     ("repo_name", "expected_verdict", "expected_surface"),
-    [
-        ("basic-node-app", "NEEDS_EVIDENCE", "dependency"),
-        ("auth-change-missing-tests", "NEEDS_EVIDENCE", "auth"),
-        ("payment-change-with-tests", "ALLOW", "payments"),
-        ("no-ci-vibe-repo", "NEEDS_EVIDENCE", "generated_code"),
-    ],
-)
+        [
+            ("basic-node-app", "NEEDS_EVIDENCE", "dependency"),
+            ("auth-change-missing-tests", "NEEDS_EVIDENCE", "auth"),
+            ("payment-change-with-tests", "NEEDS_EVIDENCE", "payments"),
+            ("no-ci-vibe-repo", "NEEDS_EVIDENCE", "generated_code"),
+        ],
+    )
 def test_recover_samples_have_expected_contract(repo_name: str, expected_verdict: str, expected_surface: str) -> None:
     snapshot = recover_repo(SAMPLES / "repos" / repo_name)
     assert snapshot["verdict"] == expected_verdict
@@ -327,7 +380,149 @@ def test_github_action_declares_workflow_outputs(output_name: str) -> None:
     assert output_name in action["outputs"]
 
 
-@pytest.mark.parametrize("required_text", ["actions/upload-artifact@v4", "GITHUB_STEP_SUMMARY", "fail-on-block", "OBSERVE_ONLY_WOULD_BLOCK"])
+@pytest.mark.parametrize(
+    "required_text",
+    [
+        "actions/upload-artifact@v4",
+        "GITHUB_STEP_SUMMARY",
+        "fail-on-block",
+        "OBSERVE_ONLY_WOULD_BLOCK",
+        "## CertaMerge Proof Gate",
+        "Matched rules:",
+        "Evidence:",
+        "Missing proof:",
+        "Accountable next action:",
+        "python -m certamerge verify-car",
+    ],
+)
 def test_github_action_contains_static_release_contract(required_text: str) -> None:
     action_text = (ROOT / "community" / "github-action" / "action.yml").read_text(encoding="utf-8")
     assert required_text in action_text
+
+
+@pytest.mark.parametrize(
+    ("repo_name", "expected_type", "expected_missing", "expected_rule"),
+    [
+        ("python-library", "python-library", {"dependency_reference", "security_doc", "sarif_scan"}, "PY-LIB-CODE-001"),
+        ("node-typescript-app", "node-typescript-app", {"owner_approval", "sarif_scan"}, "NODE-APP-RISK-002"),
+        ("github-action-repo", "github-action-repo", {"workflow_validation", "action_contract_validation", "car_verification"}, "ACTION-CONTRACT-001"),
+        ("terraform-iac-repo", "terraform-iac-repo", {"terraform_validation", "terraform_plan", "owner_approval"}, "IAC-TERRAFORM-001"),
+        ("monorepo-app", "monorepo-app", {"owner_approval", "security_doc", "license_file"}, "MONOREPO-APPS-001"),
+        ("docs-heavy-repo", "docs-heavy-repo", {"links_valid", "compliance_safe_language"}, "DOCS-PUBLIC-001"),
+    ],
+)
+def test_archetype_recover_is_repo_adaptive(repo_name: str, expected_type: str, expected_missing: set[str], expected_rule: str) -> None:
+    snapshot = recover_repo(SAMPLES / "repos" / "archetypes" / repo_name)
+    assert snapshot["profile"]["type"] == expected_type
+    missing_types = {item["type"] for item in snapshot["missing_proof"]}
+    assert expected_missing <= missing_types
+    rule_ids = {rule["id"] for rule in snapshot["suggested_policy"]["rules"]}
+    assert expected_rule in rule_ids
+
+
+def test_docs_heavy_recover_avoids_generic_test_noise() -> None:
+    snapshot = recover_repo(SAMPLES / "repos" / "archetypes" / "docs-heavy-repo")
+    missing_types = {item["type"] for item in snapshot["missing_proof"]}
+    assert "test_result" not in missing_types
+    assert "owner_approval" not in missing_types
+
+
+def test_suggested_archetype_policy_can_drive_gate_and_valid_car(tmp_path: Path) -> None:
+    repo = SAMPLES / "repos" / "archetypes" / "terraform-iac-repo"
+    snapshot = recover_repo(repo)
+    policy_path = tmp_path / "terraform.suggested.certamerge.yml"
+    policy_path.write_text(yaml.safe_dump(snapshot["suggested_policy"], sort_keys=False), encoding="utf-8")
+    car_path = tmp_path / "terraform.car.json"
+    result = gate_repo(repo, policy_path, output=car_path)
+    assert result["verdict"] == "OBSERVE_ONLY_WOULD_BLOCK"
+    assert {item["type"] for item in result["missing_proof"]} == {"terraform_validation", "terraform_plan", "owner_approval"}
+    assert verify_car(car_path)["valid"] is True
+
+
+def test_gate_car_binds_policy_file_hash(tmp_path: Path) -> None:
+    repo = tmp_path / "repo"
+    write_json(repo / ".certamerge" / "evidence" / "test-result.json", {"status": "passed"})
+    policy_path = tmp_path / "policy.certamerge.yml"
+    write_minimal_policy(policy_path)
+    car_path = tmp_path / "policy-bound.car.json"
+
+    result = gate_repo(repo, policy_path, output=car_path)
+
+    assert result["verdict"] == "OBSERVE_ONLY_WOULD_ALLOW"
+    assert verify_car(car_path)["valid"] is True
+    car = json.loads(car_path.read_text(encoding="utf-8"))
+    assert car["policy"]["policy_source"]["file_hash"].startswith("sha256:")
+    write_minimal_policy(policy_path, ["ci_status"])
+    verification = verify_car(car_path)
+    assert verification["valid"] is False
+    assert "Policy file hash does not match policy_source.file_hash." in verification["errors"]
+
+
+def test_gate_car_binds_evidence_file_hashes(tmp_path: Path) -> None:
+    repo = tmp_path / "repo"
+    evidence_path = repo / ".certamerge" / "evidence" / "test-result.json"
+    write_json(evidence_path, {"status": "passed"})
+    policy_path = tmp_path / "policy.certamerge.yml"
+    write_minimal_policy(policy_path)
+    car_path = tmp_path / "evidence-bound.car.json"
+
+    result = gate_repo(repo, policy_path, output=car_path)
+
+    assert result["verdict"] == "OBSERVE_ONLY_WOULD_ALLOW"
+    car = json.loads(car_path.read_text(encoding="utf-8"))
+    test_evidence = next(item for item in car["evidence"] if item["type"] == "test_result")
+    assert test_evidence["artifact_hashes"][0]["path"] == ".certamerge/evidence/test-result.json"
+    assert verify_car(car_path)["valid"] is True
+    write_json(evidence_path, {"status": "failed"})
+    verification = verify_car(car_path)
+    assert verification["valid"] is False
+    assert "Evidence artifact hash mismatch for .certamerge/evidence/test-result.json." in verification["errors"]
+
+
+def test_change_bound_car_records_missing_local_git_context(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    for key in ("GITHUB_ACTIONS", "GITHUB_REPOSITORY", "GITHUB_RUN_ID", "GITHUB_SHA", "GITHUB_REF", "GITHUB_HEAD_REF", "GITHUB_BASE_REF", "GITHUB_BASE_SHA", "GITHUB_HEAD_SHA"):
+        monkeypatch.delenv(key, raising=False)
+    repo = tmp_path / "repo"
+    write_json(repo / ".certamerge" / "evidence" / "test-result.json", {"status": "passed"})
+    policy_path = tmp_path / "policy.certamerge.yml"
+    write_minimal_policy(policy_path)
+    car_path = tmp_path / "missing-git-context.car.json"
+
+    result = gate_repo(repo, policy_path, output=car_path)
+
+    assert result["verdict"] == "OBSERVE_ONLY_WOULD_ALLOW"
+    assert verify_car(car_path)["valid"] is True
+    car = json.loads(car_path.read_text(encoding="utf-8"))
+    assert car["repository"]["repo_path"] == str(repo.resolve())
+    assert car["change"]["current_commit_sha"] == "unavailable"
+    assert "current_commit_sha" in car["change"]["unavailable_context"]
+    assert car["replay"]["change_binding"]["current_commit_sha"] == "unavailable"
+
+
+def test_change_bound_car_records_github_actions_context(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("GITHUB_ACTIONS", "true")
+    monkeypatch.setenv("GITHUB_REPOSITORY", "acme/widget")
+    monkeypatch.setenv("GITHUB_RUN_ID", "123456")
+    monkeypatch.setenv("GITHUB_SHA", "a" * 40)
+    monkeypatch.setenv("GITHUB_REF", "refs/pull/17/merge")
+    monkeypatch.setenv("GITHUB_HEAD_REF", "feature/proof")
+    monkeypatch.setenv("GITHUB_BASE_REF", "main")
+    monkeypatch.setenv("GITHUB_BASE_SHA", "b" * 40)
+    monkeypatch.setenv("GITHUB_HEAD_SHA", "c" * 40)
+    repo = tmp_path / "repo"
+    write_json(repo / ".certamerge" / "evidence" / "test-result.json", {"status": "passed"})
+    policy_path = tmp_path / "policy.certamerge.yml"
+    write_minimal_policy(policy_path)
+    car_path = tmp_path / "github-context.car.json"
+
+    gate_repo(repo, policy_path, output=car_path)
+
+    assert verify_car(car_path)["valid"] is True
+    car = json.loads(car_path.read_text(encoding="utf-8"))
+    assert car["repository"]["provider"] == "github"
+    assert car["repository"]["repo_id"] == "github:acme/widget"
+    assert car["change"]["change_type"] == "pull_request"
+    assert car["change"]["pr_number"] == "17"
+    assert car["change"]["github_run_id"] == "123456"
+    assert car["change"]["github_run_url"] == "https://github.com/acme/widget/actions/runs/123456"
+    assert car["replay"]["change_binding"]["head_sha"] == "c" * 40

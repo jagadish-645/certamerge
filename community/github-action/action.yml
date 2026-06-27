@@ -41,24 +41,83 @@ runs:
       id: gate
       shell: bash
       run: |
-        certamerge gate --repo "${{ inputs.repo }}" --policy "${{ inputs.policy }}" --output "${{ inputs.output }}" | tee certamerge-summary.txt
-        python - "${{ inputs.output }}" <<'PY' >> "$GITHUB_OUTPUT"
+        certamerge gate --repo "${{ inputs.repo }}" --policy "${{ inputs.policy }}" --output "${{ inputs.output }}" | tee certamerge-cli-output.txt
+        python - "${{ inputs.output }}" "${{ inputs.artifact-name }}" <<'PY' >> "$GITHUB_OUTPUT"
         import json
         import sys
-        with open(sys.argv[1], "r", encoding="utf-8") as handle:
+        car_path = sys.argv[1]
+        artifact_name = sys.argv[2]
+        summary_path = "certamerge-summary.txt"
+
+        def compact(value, limit=240):
+            text = str(value or "").replace("\r", " ").replace("\n", " ").strip()
+            if len(text) > limit:
+                return text[: limit - 3] + "..."
+            return text
+
+        with open(car_path, "r", encoding="utf-8") as handle:
             car = json.load(handle)
-        print(f"verdict={car['verdict']['state']}")
+
+        verdict = car["verdict"]["state"]
+        missing = car.get("missing_proof", [])
+        trace = car.get("verdict_trace", [])
+        matched = [item for item in trace if item.get("result") != "not_applicable"]
+        evidence = car.get("evidence", [])
+        next_action = car.get("accountable_next_action", {})
+        lines = [
+            "## CertaMerge Proof Gate",
+            "",
+            f"Verdict: `{compact(verdict, 80)}`",
+            "",
+            "Policy reason:",
+            compact(car.get("verdict", {}).get("policy_reason", "<missing>")),
+            "",
+            "Matched rules:",
+        ]
+        if matched:
+            lines.extend(f"- `{compact(item.get('rule_id', '<unknown>'), 120)}` - {compact(item.get('result', '<unknown>'), 80)}" for item in matched[:12])
+        else:
+            lines.append("- None.")
+        lines.extend(["", "Evidence:"])
+        if evidence:
+            lines.extend(f"- `{compact(item.get('type', '<unknown>'), 80)}`: `{compact(item.get('state', '<unknown>'), 40)}`" for item in evidence[:20])
+        else:
+            lines.append("- None recorded.")
+        lines.extend(["", "Missing proof:"])
+        if missing:
+            lines.extend(
+                f"- `{compact(item.get('type', '<unknown>'), 80)}`: `{compact(item.get('state', '<unknown>'), 40)}` - {compact(item.get('reason', ''))}"
+                for item in missing[:12]
+            )
+        else:
+            lines.append("- None.")
+        lines.extend(
+            [
+                "",
+                "Accountable next action:",
+                f"{compact(next_action.get('owner', '<missing>'), 80)} - {compact(next_action.get('action', '<missing>'))}",
+                "",
+                "CAR artifact:",
+                f"`{compact(artifact_name, 120)}`",
+                "",
+                "Verification:",
+                f"`python -m certamerge verify-car {compact(car_path, 160)}`",
+            ]
+        )
+        with open(summary_path, "w", encoding="utf-8") as handle:
+            handle.write("\n".join(lines) + "\n")
+        print(f"verdict={verdict}")
         PY
     - name: Write CertaMerge PR Summary
       shell: bash
       if: always()
       run: |
         {
-          echo "## CertaMerge"
-          echo
           if [ -f certamerge-summary.txt ]; then
             cat certamerge-summary.txt
           else
+            echo "## CertaMerge Proof Gate"
+            echo
             echo "CertaMerge did not produce a summary. Check the prior action step logs."
           fi
           echo

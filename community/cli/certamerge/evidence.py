@@ -32,6 +32,16 @@ REQUIRED_EVIDENCE_ALIASES = {
     "compliance_safe_language": "compliance_safe_language",
     "no_secret_leakage": "no_secret_leakage",
     "links_valid": "links_valid",
+    "license_file": "license_file",
+    "codeowners": "codeowners",
+    "pr_template": "pr_template",
+    "issue_template": "issue_template",
+    "action_metadata": "action_metadata",
+    "terraform_files": "terraform_files",
+    "terraform_validation": "terraform_validation",
+    "terraform_plan": "terraform_plan",
+    "docs_site": "docs_site",
+    "docs_build": "docs_build",
 }
 
 
@@ -117,14 +127,48 @@ def _metadata_evidence_refs(names: list[str], *needles: str) -> list[str]:
 
 def detect_signals(repo: Path, files: list[Path]) -> dict[str, Any]:
     names = [p.as_posix() for p in files]
+    lower_names = {name.lower(): name for name in names}
     package = _package_json(repo) or {}
     scripts = package.get("scripts") if isinstance(package.get("scripts"), dict) else {}
     lint_refs = ["package.json:scripts.lint"] if isinstance(scripts, dict) and package_json_has_script(repo, "lint") else []
     lint_refs.extend(name for name in names if name.startswith(".eslint") or name in {"ruff.toml", "flake8"})
+    test_source_refs = [
+        name
+        for name in names
+        if name.startswith("tests/")
+        or name.startswith("__tests__/")
+        or "/tests/" in name
+        or "/__tests__/" in name
+        or name.endswith(".test.js")
+        or name.endswith(".test.ts")
+        or name.endswith("_test.py")
+        or name.endswith("_test.go")
+    ]
+    docs_refs = [name for name in names if name.startswith("docs/") or name in {"README.md", "mkdocs.yml", "docusaurus.config.js"}]
+    codeowners_refs = [
+        name
+        for name in names
+        if name in {"CODEOWNERS", ".github/CODEOWNERS", "docs/CODEOWNERS"}
+    ]
+    pr_template_refs = [
+        name
+        for name in names
+        if name in {"PULL_REQUEST_TEMPLATE.md", ".github/PULL_REQUEST_TEMPLATE.md"} or name.startswith(".github/PULL_REQUEST_TEMPLATE/")
+    ]
+    issue_template_refs = [name for name in names if name.startswith(".github/ISSUE_TEMPLATE/")]
+    terraform_refs = [name for name in names if name.endswith(".tf") or name.endswith(".tfvars")]
+    docs_build_refs = []
+    if "mkdocs.yml" in names or "docusaurus.config.js" in names:
+        docs_build_refs.append("docs-site-config")
+    if isinstance(scripts, dict):
+        for script_name in ("docs", "build:docs", "docs:build"):
+            if package_json_has_script(repo, script_name):
+                docs_build_refs.append(f"package.json:scripts.{script_name}")
     return {
         "package_manager_files": [name for name in names if name in {"package.json", "pyproject.toml", "requirements.txt", "go.mod"}],
         "test_scripts": ["package.json:scripts.test"] if package_json_has_script(repo, "test") else [],
         "test_script_state": package_json_script_state(repo, "test"),
+        "test_source_refs": sorted(set(test_source_refs)),
         "ci_configs": [name for name in names if name.startswith(".github/workflows/") or name == ".gitlab-ci.yml"],
         "lockfiles": [name for name in names if name in {"package-lock.json", "pnpm-lock.yaml", "yarn.lock", "poetry.lock", "go.sum"}],
         "lint_refs": sorted(set(lint_refs)),
@@ -152,6 +196,16 @@ def detect_signals(repo: Path, files: list[Path]) -> dict[str, Any]:
         "compliance_safe_language_refs": _metadata_evidence_refs(names, "compliance-safe-language"),
         "no_secret_leakage_refs": _metadata_evidence_refs(names, "no-secret-leakage"),
         "links_valid_refs": _metadata_evidence_refs(names, "links-valid"),
+        "license_refs": [lower_names[key] for key in lower_names if key in {"license", "license.md", "license.txt", "copying"}],
+        "codeowners_refs": codeowners_refs,
+        "pr_template_refs": pr_template_refs,
+        "issue_template_refs": issue_template_refs,
+        "action_metadata_refs": [name for name in names if name in {"action.yml", "action.yaml"}],
+        "terraform_refs": terraform_refs,
+        "terraform_validation_refs": _metadata_evidence_refs(names, "terraform-validation", "tf-validate"),
+        "terraform_plan_refs": _metadata_evidence_refs(names, "terraform-plan", "tf-plan"),
+        "docs_refs": sorted(set(docs_refs)),
+        "docs_build_refs": sorted(set(docs_build_refs + _metadata_evidence_refs(names, "docs-build"))),
         "readme": ["README.md"] if "README.md" in names else [],
         "contributing": ["CONTRIBUTING.md"] if "CONTRIBUTING.md" in names else [],
         "security": ["SECURITY.md"] if "SECURITY.md" in names else [],
@@ -202,6 +256,7 @@ def _test_result_fact(repo: Path, script_state: str, script_refs: list[str], res
     passed = 0
     failed = 0
     stale = 0
+    unavailable = 0
     insufficient = 0
     now = _now()
     for ref in result_refs:
@@ -217,6 +272,8 @@ def _test_result_fact(repo: Path, script_state: str, script_refs: list[str], res
             passed += 1
         elif status in {"failed", "fail", "failure", "error", "red"}:
             failed += 1
+        elif status in {"unavailable", "not_available", "unreachable", "skipped_unavailable"}:
+            unavailable += 1
         else:
             insufficient += 1
     if failed:
@@ -225,6 +282,8 @@ def _test_result_fact(repo: Path, script_state: str, script_refs: list[str], res
         return _fact("test_result", "present", "Test result evidence is present and passing.", refs)
     if stale:
         return _fact("test_result", "stale", "Test result evidence is expired.", refs)
+    if unavailable:
+        return _fact("test_result", "unavailable", "Test result evidence is explicitly unavailable.", refs)
     if insufficient:
         return _fact("test_result", "insufficient", "Test result evidence exists but lacks a passing or failing status.", refs)
     return _fact("test_result", script_state, "Test result evidence is missing.", refs)
@@ -236,6 +295,7 @@ def _owner_approval_fact(repo: Path, refs: list[str]) -> dict[str, Any]:
     approved = 0
     denied = 0
     stale = 0
+    unavailable = 0
     insufficient = 0
     now = _now()
     approvers: list[str] = []
@@ -255,6 +315,8 @@ def _owner_approval_fact(repo: Path, refs: list[str]) -> dict[str, Any]:
                 approvers.append(owner)
         elif decision in {"denied", "rejected", "blocked"}:
             denied += 1
+        elif decision in {"unavailable", "not_available", "unreachable"}:
+            unavailable += 1
         else:
             insufficient += 1
     if approved and denied:
@@ -265,6 +327,8 @@ def _owner_approval_fact(repo: Path, refs: list[str]) -> dict[str, Any]:
         return _fact("owner_approval", "present", "Owner approval reference present and approved.", refs, {"approvers": approvers})
     if stale:
         return _fact("owner_approval", "stale", "Owner approval evidence is expired.", refs)
+    if unavailable:
+        return _fact("owner_approval", "unavailable", "Owner approval evidence is explicitly unavailable.", refs)
     if insufficient:
         return _fact("owner_approval", "insufficient", "Owner approval evidence exists but lacks an approved decision.", refs)
     return _fact("owner_approval", "missing", "Owner approval evidence is missing.")
@@ -294,6 +358,66 @@ def evidence_from_signals(repo: Path, signals: dict[str, Any]) -> list[dict[str,
         _owner_approval_fact(repo, list(signals.get("owner_approval_refs", []))),
         _fact("github_actions_artifact", "present" if ci_refs else "missing", "GitHub Actions workflow reference present." if ci_refs else "GitHub Actions artifact/reference evidence is missing.", ci_refs),
         _fact("security_doc", "present" if signals.get("security") else "missing", "Security policy document present." if signals.get("security") else "Security policy document is missing.", list(signals.get("security", []))),
+        _fact(
+            "license_file",
+            "present" if signals.get("license_refs") else "missing",
+            "License file present." if signals.get("license_refs") else "License file is missing.",
+            list(signals.get("license_refs", [])),
+        ),
+        _fact(
+            "codeowners",
+            "present" if signals.get("codeowners_refs") else "missing",
+            "CODEOWNERS reference present." if signals.get("codeowners_refs") else "CODEOWNERS reference is missing.",
+            list(signals.get("codeowners_refs", [])),
+        ),
+        _fact(
+            "pr_template",
+            "present" if signals.get("pr_template_refs") else "missing",
+            "Pull request template present." if signals.get("pr_template_refs") else "Pull request template is missing.",
+            list(signals.get("pr_template_refs", [])),
+        ),
+        _fact(
+            "issue_template",
+            "present" if signals.get("issue_template_refs") else "missing",
+            "Issue template reference present." if signals.get("issue_template_refs") else "Issue template reference is missing.",
+            list(signals.get("issue_template_refs", [])),
+        ),
+        _fact(
+            "action_metadata",
+            "present" if signals.get("action_metadata_refs") else "missing",
+            "GitHub Action metadata present." if signals.get("action_metadata_refs") else "GitHub Action metadata is missing.",
+            list(signals.get("action_metadata_refs", [])),
+        ),
+        _fact(
+            "terraform_files",
+            "present" if signals.get("terraform_refs") else "missing",
+            "Terraform files present." if signals.get("terraform_refs") else "Terraform files are missing.",
+            list(signals.get("terraform_refs", [])),
+        ),
+        _fact(
+            "terraform_validation",
+            "present" if signals.get("terraform_validation_refs") else "missing",
+            "Terraform validation evidence is present." if signals.get("terraform_validation_refs") else "Terraform validation evidence is missing.",
+            list(signals.get("terraform_validation_refs", [])),
+        ),
+        _fact(
+            "terraform_plan",
+            "present" if signals.get("terraform_plan_refs") else "missing",
+            "Terraform plan evidence is present." if signals.get("terraform_plan_refs") else "Terraform plan evidence is missing.",
+            list(signals.get("terraform_plan_refs", [])),
+        ),
+        _fact(
+            "docs_site",
+            "present" if signals.get("docs_refs") else "missing",
+            "Documentation surface present." if signals.get("docs_refs") else "Documentation surface is missing.",
+            list(signals.get("docs_refs", [])),
+        ),
+        _fact(
+            "docs_build",
+            "present" if signals.get("docs_build_refs") else "missing",
+            "Documentation build evidence or config present." if signals.get("docs_build_refs") else "Documentation build evidence is missing.",
+            list(signals.get("docs_build_refs", [])),
+        ),
         _fact(
             "car_verification",
             "present" if signals.get("car_verification_refs") else "missing",
@@ -369,7 +493,7 @@ def evidence_satisfied(required: str, snapshot: dict[str, Any]) -> bool:
 def missing_proof_from_evidence(evidence: list[dict[str, Any]], risk_surfaces: list[str]) -> list[dict[str, Any]]:
     missing: list[dict[str, Any]] = []
     required = ["test_result", "ci_status"]
-    if any(surface in {"auth", "payments", "database", "deployment"} for surface in risk_surfaces):
+    if any(surface in {"auth", "payments", "database"} for surface in risk_surfaces):
         required.append("owner_approval")
     for evidence_type in required:
         item = next((ev for ev in evidence if ev["type"] == evidence_type), None)

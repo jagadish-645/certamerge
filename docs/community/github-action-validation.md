@@ -57,6 +57,7 @@ The local test suite and CI workflow validate:
 - artifact name can be customized to avoid collisions in multi-job validation workflows;
 - summary step writes to `GITHUB_STEP_SUMMARY`;
 - blocking state list includes `OBSERVE_ONLY_WOULD_BLOCK`;
+- summary body includes verdict, policy reason, matched rules, evidence states, missing proof, accountable next action, CAR artifact, and verification command;
 - default behavior is non-blocking.
 
 ## Example Caller Workflow

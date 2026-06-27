@@ -1,0 +1,4 @@
+site_name: Proof Docs Fixture
+nav:
+  - Home: index.md
+  - Security: security.md

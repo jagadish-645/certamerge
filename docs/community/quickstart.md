@@ -45,7 +45,9 @@ Expected shape:
 
 ```text
 Verdict: NEEDS_EVIDENCE
-Policy reason: Recover checks basic proof signals without claiming security correctness.
+Policy reason: Recover checks repo-adaptive proof signals without claiming security correctness.
+Repo profile: node-typescript-app
+Ecosystems: node
 Missing proof: test_result, ci_status, owner_approval
 Accountable next action: repo-owner - Review generated repair missions and rerun CertaMerge after evidence is present.
 ```
@@ -88,7 +90,7 @@ Expected shape:
 }
 ```
 
-The verifier checks schema rules, verdict consistency, evidence-state consistency, and the CAR content hash.
+The verifier checks schema rules, verdict consistency, evidence-state consistency, the CAR content hash, and change-bound policy/evidence hashes when present.
 
 ## Explain The CAR
 
@@ -105,6 +107,8 @@ Policy reason: All matched policy requirements are satisfied.
 Missing proof: No missing proof required by current policy.
 Accountable next action: repo-owner - Proceed with record.
 CAR state: final
+Commit: <commit-or-unavailable>
+Policy hash: sha256:...
 ```
 
 ## Try A Would-Block Sample
@@ -141,6 +145,7 @@ CertaMerge Community runs locally. It reads repository metadata, selected config
 
 - [Alpha limitations](alpha-limitations.md)
 - [CAR integrity](car-integrity.md)
+- [Change-bound proof](change-bound-proof.md)
 - [No source egress](no-source-egress.md)
 - [GitHub Action](github-action.md)
 - [Self-dogfooding](self-dogfooding.md)
