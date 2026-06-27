@@ -11,6 +11,7 @@ from .car import write_json
 from .gate import gate_repo
 from .recover import recover_repo
 from .verifier import explain_car as explain_car_text
+from .verifier import load_car
 from .verifier import verify_car as verify_car_file
 
 app = typer.Typer(no_args_is_help=True, add_completion=False)
@@ -25,8 +26,28 @@ def verify_car(path: Path) -> None:
 
 
 @app.command()
-def explain_car(path: Path) -> None:
+def explain_car(path: Path, json_output: Annotated[bool, typer.Option("--json", help="Emit machine-readable JSON.")] = False) -> None:
     try:
+        if json_output:
+            car = load_car(path)
+            verification = verify_car_file(path)
+            typer.echo(
+                json.dumps(
+                    {
+                        "car_id": car.get("car_id", ""),
+                        "verdict": car.get("verdict", {}).get("state", ""),
+                        "policy_reason": car.get("verdict", {}).get("policy_reason", ""),
+                        "missing_proof": car.get("missing_proof", []),
+                        "accountable_next_action": car.get("accountable_next_action", {}),
+                        "record_state": car.get("record_state", ""),
+                        "change": car.get("change", {}),
+                        "policy": car.get("policy", {}),
+                        "verification": verification,
+                    },
+                    indent=2,
+                )
+            )
+            return
         typer.echo(explain_car_text(path))
     except ValueError as exc:
         typer.echo(f"Error: {exc}", err=True)
@@ -34,10 +55,18 @@ def explain_car(path: Path) -> None:
 
 
 @app.command()
-def recover(repo: Path, output: Optional[Path] = None, suggest_policy: bool = False) -> None:
+def recover(
+    repo: Path,
+    output: Optional[Path] = None,
+    suggest_policy: bool = False,
+    json_output: Annotated[bool, typer.Option("--json", help="Emit machine-readable JSON.")] = False,
+) -> None:
     snapshot = recover_repo(repo)
     if output:
         write_json(output, snapshot)
+    if json_output:
+        typer.echo(json.dumps(snapshot, indent=2))
+        return
     profile = snapshot["profile"]
     typer.echo(f"Verdict: {snapshot['verdict']}")
     typer.echo("Policy reason: Recover checks repo-adaptive proof signals without claiming security correctness.")
@@ -77,12 +106,16 @@ def gate(
     changed_files: Annotated[Optional[Path], typer.Option("--changed-files")] = None,
     base: Annotated[Optional[str], typer.Option("--base")] = None,
     head: Annotated[Optional[str], typer.Option("--head")] = None,
+    json_output: Annotated[bool, typer.Option("--json", help="Emit machine-readable JSON.")] = False,
 ) -> None:
     try:
         result = gate_repo(repo, policy, output, changed_files_path=changed_files, base=base, head=head)
     except ValueError as exc:
         typer.echo(f"Error: {exc}", err=True)
         raise typer.Exit(code=1) from exc
+    if json_output:
+        typer.echo(json.dumps(result, indent=2))
+        return
     typer.echo(f"Verdict: {result['verdict']}")
     typer.echo(f"Policy reason: {result['policy_reason']}")
     if result["missing_proof"]:

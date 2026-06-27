@@ -1,0 +1,34 @@
+{
+  "workflow_id": "agent-auth-missing-proof-001",
+  "persona": "ai-coding-agent",
+  "repo": "samples/repos/auth-change-missing-tests",
+  "steps": [
+    {
+      "command": "python -m certamerge recover samples/repos/auth-change-missing-tests --json",
+      "expected": "NEEDS_EVIDENCE with auth risk and missing test_result / owner_approval proof"
+    },
+    {
+      "command": "python -m certamerge suggest-policy samples/repos/auth-change-missing-tests --output .tmp/agent.auth.certamerge.yml",
+      "expected": "repo-specific starter policy"
+    },
+    {
+      "command": "python -m certamerge gate --repo samples/repos/auth-change-missing-tests --policy samples/policies/auth.certamerge.yml --output .tmp/agent.auth.car.json --json",
+      "expected": "OBSERVE_ONLY_WOULD_BLOCK with accountable next action"
+    },
+    {
+      "command": "python -m certamerge verify-car .tmp/agent.auth.car.json",
+      "expected": "valid true"
+    },
+    {
+      "command": "python -m certamerge explain-car .tmp/agent.auth.car.json --json",
+      "expected": "machine-readable proof summary for PR text"
+    }
+  ],
+  "forbidden_agent_behaviors": [
+    "invent proof",
+    "weaken policy to pass",
+    "claim code is secure",
+    "send raw source code to external services",
+    "treat an LLM as final authorization"
+  ]
+}

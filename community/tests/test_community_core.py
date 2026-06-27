@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 from pathlib import Path
 
 from typer.testing import CliRunner
@@ -126,6 +127,43 @@ def test_cli_verify_and_explain_car(tmp_path: Path) -> None:
     explain_result = runner.invoke(app, ["explain-car", str(car_path)])
     assert explain_result.exit_code == 0, explain_result.output
     assert "Verdict: ALLOW" in explain_result.output
+
+
+def test_cli_agent_json_outputs_are_machine_readable(tmp_path: Path) -> None:
+    runner = CliRunner()
+
+    recover_result = runner.invoke(app, ["recover", str(SAMPLES / "repos" / "no-ci-vibe-repo"), "--json"])
+    assert recover_result.exit_code == 0, recover_result.output
+    recover_payload = json.loads(recover_result.output)
+    assert recover_payload["verdict"] == "NEEDS_EVIDENCE"
+    assert recover_payload["missing_proof"]
+    assert recover_payload["repair_missions"]
+
+    car_path = tmp_path / "payment-car.json"
+    gate_result = runner.invoke(
+        app,
+        [
+            "gate",
+            "--repo",
+            str(SAMPLES / "repos" / "payment-change-with-tests"),
+            "--policy",
+            str(SAMPLES / "policies" / "payment.certamerge.yml"),
+            "--output",
+            str(car_path),
+            "--json",
+        ],
+    )
+    assert gate_result.exit_code == 0, gate_result.output
+    gate_payload = json.loads(gate_result.output)
+    assert gate_payload["verdict"] == "ALLOW"
+    assert gate_payload["car"]["car_id"]
+    assert car_path.exists()
+
+    explain_result = runner.invoke(app, ["explain-car", str(car_path), "--json"])
+    assert explain_result.exit_code == 0, explain_result.output
+    explain_payload = json.loads(explain_result.output)
+    assert explain_payload["verdict"] == "ALLOW"
+    assert explain_payload["verification"]["valid"] is True
 
 
 def test_written_sample_like_car_validates(tmp_path: Path) -> None:
