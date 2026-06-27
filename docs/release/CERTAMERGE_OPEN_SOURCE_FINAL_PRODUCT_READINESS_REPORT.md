@@ -6,9 +6,9 @@ Branch: `finalization/open-source-product-hardening`
 
 Source branch head before this hardening pass: `d4418eb`
 
-Validated hardening commit: `60f7893`
+Validated branch hardening commit before squash merge: `60f7893`
 
-Note: if this report is amended after the hardening commit, use `git log --oneline` on `finalization/open-source-product-hardening` to identify the latest report-only metadata commit.
+Merged main commit after PR #5: `54dad94`
 
 ## Product Status
 
