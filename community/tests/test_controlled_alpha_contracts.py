@@ -500,6 +500,7 @@ def test_change_bound_car_records_missing_local_git_context(tmp_path: Path, monk
 
 
 def test_change_bound_car_records_github_actions_context(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.delenv("GITHUB_EVENT_PATH", raising=False)
     monkeypatch.setenv("GITHUB_ACTIONS", "true")
     monkeypatch.setenv("GITHUB_REPOSITORY", "acme/widget")
     monkeypatch.setenv("GITHUB_RUN_ID", "123456")
