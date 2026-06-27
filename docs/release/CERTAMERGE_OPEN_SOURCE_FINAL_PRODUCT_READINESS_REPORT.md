@@ -4,7 +4,11 @@ Generated: 2026-06-27
 
 Branch: `finalization/open-source-product-hardening`
 
-Current branch head at report generation: `d4418eb`
+Source branch head before this hardening pass: `d4418eb`
+
+Validated hardening commit: `60f7893`
+
+Note: if this report is amended after the hardening commit, use `git log --oneline` on `finalization/open-source-product-hardening` to identify the latest report-only metadata commit.
 
 ## Product Status
 
