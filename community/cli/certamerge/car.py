@@ -13,6 +13,8 @@ from typing import Any
 from . import __version__
 from .schema import CAR_VERSION
 
+CHANGE_CONTEXT_MODES = {"github_pr", "git_diff", "explicit_changed_files", "repo_snapshot"}
+
 
 def utc_now() -> str:
     return datetime.now(timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z")
@@ -47,6 +49,105 @@ def _git(repo: Path, *args: str) -> str | None:
     return value or None
 
 
+def _git_lines(repo: Path, *args: str) -> list[str] | None:
+    value = _git(repo, *args)
+    if value is None:
+        return None
+    return [line.strip() for line in value.splitlines() if line.strip()]
+
+
+def _normalize_changed_files(values: list[str]) -> list[str]:
+    normalized: list[str] = []
+    for value in values:
+        clean = value.strip().replace("\\", "/")
+        if not clean or clean.startswith("#") or clean.startswith("/"):
+            continue
+        if re.match(r"^[A-Za-z]:", clean):
+            continue
+        if ".." in Path(clean).parts:
+            continue
+        normalized.append(clean)
+    return sorted(set(normalized))
+
+
+def _read_changed_files_file(path: Path) -> list[str]:
+    try:
+        lines = path.read_text(encoding="utf-8").splitlines()
+    except OSError as exc:
+        raise ValueError(f"Changed-files input could not be read: {path}") from exc
+    return _normalize_changed_files(lines)
+
+
+def _github_event_pr_context() -> dict[str, str]:
+    event_path = os.environ.get("GITHUB_EVENT_PATH")
+    if not event_path:
+        return {}
+    try:
+        event = json.loads(Path(event_path).read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError, UnicodeDecodeError):
+        return {}
+    pull_request = event.get("pull_request") if isinstance(event, dict) else None
+    if not isinstance(pull_request, dict):
+        return {}
+    base = pull_request.get("base") if isinstance(pull_request.get("base"), dict) else {}
+    head = pull_request.get("head") if isinstance(pull_request.get("head"), dict) else {}
+    number = pull_request.get("number") or event.get("number")
+    return {
+        "base_sha": str(base.get("sha") or ""),
+        "head_sha": str(head.get("sha") or ""),
+        "pr_number": str(number or ""),
+    }
+
+
+def resolve_change_scope(
+    repo: Path,
+    changed_files_path: Path | None = None,
+    base: str | None = None,
+    head: str | None = None,
+) -> dict[str, Any]:
+    repo = repo.resolve()
+    unavailable: list[str] = []
+    github_event = _github_event_pr_context()
+    github_actions = os.environ.get("GITHUB_ACTIONS") == "true"
+
+    if changed_files_path is not None:
+        changed_files = _read_changed_files_file(changed_files_path)
+        return {
+            "change_context_mode": "explicit_changed_files",
+            "changed_files": changed_files,
+            "base_sha": base or os.environ.get("GITHUB_BASE_SHA") or github_event.get("base_sha") or "unavailable",
+            "head_sha": head or os.environ.get("GITHUB_HEAD_SHA") or os.environ.get("GITHUB_SHA") or github_event.get("head_sha") or "unavailable",
+            "pr_number": os.environ.get("CERTAMERGE_PR_NUMBER") or github_event.get("pr_number") or "unavailable",
+            "change_context_warnings": [] if changed_files else ["explicit_changed_files_empty"],
+        }
+
+    event_base = github_event.get("base_sha") or os.environ.get("GITHUB_BASE_SHA")
+    event_head = github_event.get("head_sha") or os.environ.get("GITHUB_HEAD_SHA") or os.environ.get("GITHUB_SHA")
+    diff_base = base or event_base
+    diff_head = head or event_head
+    if diff_base and diff_head:
+        changed_files = _git_lines(repo, "diff", "--name-only", f"{diff_base}...{diff_head}")
+        if changed_files is not None:
+            return {
+                "change_context_mode": "github_pr" if github_actions or github_event else "git_diff",
+                "changed_files": _normalize_changed_files(changed_files),
+                "base_sha": diff_base,
+                "head_sha": diff_head,
+                "pr_number": os.environ.get("CERTAMERGE_PR_NUMBER") or github_event.get("pr_number") or "unavailable",
+                "change_context_warnings": [],
+            }
+        unavailable.append("changed_files_git_diff")
+
+    return {
+        "change_context_mode": "repo_snapshot",
+        "changed_files": [],
+        "base_sha": diff_base or os.environ.get("GITHUB_BASE_SHA") or "unavailable",
+        "head_sha": diff_head or os.environ.get("GITHUB_HEAD_SHA") or os.environ.get("GITHUB_SHA") or _git(repo, "rev-parse", "HEAD") or "unavailable",
+        "pr_number": os.environ.get("CERTAMERGE_PR_NUMBER") or github_event.get("pr_number") or "unavailable",
+        "change_context_warnings": sorted(set(unavailable)),
+    }
+
+
 def _pr_number_from_ref(ref: str | None) -> str:
     if not ref:
         return "unavailable"
@@ -54,8 +155,9 @@ def _pr_number_from_ref(ref: str | None) -> str:
     return match.group(1) if match else "unavailable"
 
 
-def change_context(repo: Path) -> dict[str, Any]:
+def change_context(repo: Path, change_scope: dict[str, Any] | None = None) -> dict[str, Any]:
     env = os.environ
+    change_scope = change_scope or resolve_change_scope(repo)
     resolved = repo.resolve()
     github_actions = env.get("GITHUB_ACTIONS") == "true"
     github_repository = env.get("GITHUB_REPOSITORY", "")
@@ -64,8 +166,8 @@ def change_context(repo: Path) -> dict[str, Any]:
     git_root = _git(resolved, "rev-parse", "--show-toplevel")
     branch = env.get("GITHUB_HEAD_REF") or _git(resolved, "rev-parse", "--abbrev-ref", "HEAD")
     current_sha = env.get("GITHUB_SHA") or _git(resolved, "rev-parse", "HEAD")
-    base_sha = env.get("GITHUB_BASE_SHA") or "unavailable"
-    head_sha = env.get("GITHUB_HEAD_SHA") or env.get("GITHUB_SHA") or current_sha or "unavailable"
+    base_sha = change_scope.get("base_sha") or env.get("GITHUB_BASE_SHA") or "unavailable"
+    head_sha = change_scope.get("head_sha") or env.get("GITHUB_HEAD_SHA") or env.get("GITHUB_SHA") or current_sha or "unavailable"
     github_ref = env.get("GITHUB_REF", "")
     unavailable = []
     if not current_sha:
@@ -75,16 +177,25 @@ def change_context(repo: Path) -> dict[str, Any]:
     if not git_root and not github_actions:
         unavailable.append("git_repository_context")
     source_system = "github_actions" if github_actions else "local"
-    pr_number = env.get("CERTAMERGE_PR_NUMBER") or _pr_number_from_ref(github_ref)
+    scope_pr_number = change_scope.get("pr_number")
+    pr_number = scope_pr_number if scope_pr_number and scope_pr_number != "unavailable" else env.get("CERTAMERGE_PR_NUMBER") or _pr_number_from_ref(github_ref)
+    changed_files = list(change_scope.get("changed_files") or [])
+    change_context_mode = change_scope.get("change_context_mode") or "repo_snapshot"
+    if change_context_mode not in CHANGE_CONTEXT_MODES:
+        change_context_mode = "repo_snapshot"
+    unavailable.extend(str(item) for item in change_scope.get("change_context_warnings", []))
     run_url = ""
     if github_repository and github_run_id:
         run_url = f"{github_server}/{github_repository}/actions/runs/{github_run_id}"
     return {
         "change_id": f"github:{github_repository}:pr:{pr_number}" if github_actions and pr_number != "unavailable" else "local_repo_snapshot",
         "change_type": "pull_request" if github_actions and pr_number != "unavailable" else "repo_snapshot",
+        "change_context_mode": change_context_mode,
         "source_system": source_system,
         "source_ref": str(repo),
         "repo_path": str(resolved),
+        "changed_files": changed_files,
+        "changed_file_count": len(changed_files),
         "branch": branch or "unavailable",
         "current_commit_sha": current_sha or "unavailable",
         "base_ref": env.get("GITHUB_BASE_REF") or base_sha,
@@ -187,10 +298,11 @@ def base_car(
     next_action: str,
     policy_path: Path | None = None,
     record_state: str | None = None,
+    change_scope: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     created_at = utc_now()
     repo = repo.resolve()
-    context = change_context(repo)
+    context = change_context(repo, change_scope)
     bound_evidence = _bind_evidence_hashes(repo, evidence)
     evidence_refs = [item["evidence_id"] for item in bound_evidence if "evidence_id" in item]
     evidence_artifact_hashes = _artifact_hashes(repo, bound_evidence)

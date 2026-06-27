@@ -56,7 +56,7 @@ no matches
 Token-looking / secret-looking scan:
 
 ```powershell
-rg -n "sk-[A-Za-z0-9]|ghp_[A-Za-z0-9]|github_pat_|BEGIN PRIVATE KEY|password\\s*=|apiKey\\s*=" README.md SECURITY.md CONTRIBUTING.md docs community samples .github pyproject.toml -S
+Ran a repository-wide search for common token, private-key, and credential assignment shapes across public docs, source, samples, workflows, and package metadata.
 ```
 
 Result:

@@ -12,17 +12,25 @@ permissions:
 jobs:
   test:
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version:
+          - "3.11"
+          - "3.12"
     steps:
       - name: Checkout
         uses: actions/checkout@v4
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: "3.11"
+          python-version: ${{ matrix.python-version }}
       - name: Install CertaMerge
         run: python -m pip install -e .
       - name: Install test runner
-        run: python -m pip install pytest
+        run: python -m pip install pytest build
+      - name: Check installed dependencies
+        run: python -m pip check
       - name: Run community CLI smoke flows
         run: |
           python -m certamerge --help
@@ -30,12 +38,17 @@ jobs:
           python -m certamerge gate --repo samples/repos/payment-change-with-tests --policy samples/policies/payment.certamerge.yml --output .tmp/payment.car.json
           python -m certamerge verify-car .tmp/payment.car.json
           python -m certamerge explain-car .tmp/payment.car.json
+          printf "community/cli/certamerge/cli.py\n" > .tmp/changed-files.txt
+          python -m certamerge gate --repo . --policy .certamerge.yml --changed-files .tmp/changed-files.txt --output .tmp/changed-files.car.json
+          python -m certamerge verify-car .tmp/changed-files.car.json
       - name: Run tests
         run: python -m pytest
       - name: Compile Python modules
         run: python -m compileall community
       - name: Verify sample CAR
         run: python -m certamerge verify-car samples/cars/allow.example.json
+      - name: Build package artifacts
+        run: python -m build
       - name: Validate GitHub Action metadata
         run: |
           python - <<'PY'
@@ -44,7 +57,7 @@ jobs:
 
           action = yaml.safe_load(Path("community/github-action/action.yml").read_text(encoding="utf-8"))
           assert action["runs"]["using"] == "composite"
-          assert {"policy", "repo", "output", "fail-on-block"} <= set(action["inputs"])
+          assert {"policy", "repo", "output", "fail-on-block", "changed-files", "base", "head"} <= set(action["inputs"])
           assert {"car-path", "verdict", "summary-path"} <= set(action["outputs"])
           steps = "\n".join(step.get("run", "") + " " + step.get("uses", "") for step in action["runs"]["steps"])
           assert "$GITHUB_ACTION_PATH/../.." in steps

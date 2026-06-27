@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import xml.etree.ElementTree as ET
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
@@ -17,6 +18,8 @@ REQUIRED_EVIDENCE_ALIASES = {
     "sarif": "sarif_scan",
     "sarif_scan": "sarif_scan",
     "security_scan": "sarif_scan",
+    "gitleaks": "secret_scan",
+    "secret_scan": "secret_scan",
     "dependency": "dependency_reference",
     "dependency_reference": "dependency_reference",
     "sbom": "dependency_reference",
@@ -53,6 +56,13 @@ def _read_json(path: Path) -> tuple[dict[str, Any] | None, str | None]:
     if not isinstance(data, dict):
         return None, "JSON evidence must be an object."
     return data, None
+
+
+def _read_xml(path: Path) -> tuple[ET.Element | None, str | None]:
+    try:
+        return ET.parse(path).getroot(), None
+    except (ET.ParseError, OSError, UnicodeDecodeError) as exc:
+        return None, str(exc)
 
 
 def _parse_time(value: Any) -> datetime | None:
@@ -177,8 +187,18 @@ def detect_signals(repo: Path, files: list[Path]) -> dict[str, Any]:
             for name in names
             if name.startswith(".certamerge/evidence/") and ("test-result" in name.lower() or "test_result" in name.lower())
         ],
-        "sarif_files": [name for name in names if name.endswith(".sarif")],
-        "sbom_refs": [name for name in names if "sbom" in name.lower() and (name.endswith(".json") or name.endswith(".xml"))],
+        "junit_refs": [
+            name
+            for name in names
+            if name.endswith(".xml") and ("junit" in name.lower() or "surefire-reports" in name.lower() or "test-results" in name.lower())
+        ],
+        "sarif_files": [name for name in names if name.endswith(".sarif") or name.endswith(".sarif.json")],
+        "sbom_refs": [
+            name
+            for name in names
+            if (name.endswith(".json") or name.endswith(".xml"))
+            and ("sbom" in name.lower() or "cyclonedx" in name.lower() or name.lower().endswith("bom.json") or name.lower().endswith("bom.xml"))
+        ],
         "dependency_review_refs": [
             name
             for name in names
@@ -203,7 +223,21 @@ def detect_signals(repo: Path, files: list[Path]) -> dict[str, Any]:
         "action_metadata_refs": [name for name in names if name in {"action.yml", "action.yaml"}],
         "terraform_refs": terraform_refs,
         "terraform_validation_refs": _metadata_evidence_refs(names, "terraform-validation", "tf-validate"),
-        "terraform_plan_refs": _metadata_evidence_refs(names, "terraform-plan", "tf-plan"),
+        "terraform_plan_refs": sorted(
+            set(
+                _metadata_evidence_refs(names, "terraform-plan", "tf-plan")
+                + [
+                    name
+                    for name in names
+                    if name.endswith(".json") and ("terraform-plan" in name.lower() or "tfplan" in name.lower() or name.lower().endswith("plan.json"))
+                ]
+            )
+        ),
+        "secret_scan_refs": [
+            name
+            for name in names
+            if name.endswith(".json") and ("gitleaks" in name.lower() or "secret-scan" in name.lower() or "secrets-scan" in name.lower())
+        ],
         "docs_refs": sorted(set(docs_refs)),
         "docs_build_refs": sorted(set(docs_build_refs + _metadata_evidence_refs(names, "docs-build"))),
         "readme": ["README.md"] if "README.md" in names else [],
@@ -248,9 +282,36 @@ def _sarif_fact(repo: Path, refs: list[str]) -> dict[str, Any]:
     return _fact("sarif_scan", "failed", f"SARIF evidence contains {total_results} finding(s).", refs, {"finding_count": total_results})
 
 
-def _test_result_fact(repo: Path, script_state: str, script_refs: list[str], result_refs: list[str]) -> dict[str, Any]:
-    refs = script_refs + result_refs
-    if not result_refs:
+def _junit_state(repo: Path, ref: str) -> tuple[str, dict[str, int], str]:
+    root, error = _read_xml(repo / ref)
+    if error or root is None:
+        return "malformed", {}, f"JUnit evidence could not be parsed: {error}"
+    suites = [root] if root.tag.endswith("testsuite") else [item for item in root.iter() if item.tag.endswith("testsuite")]
+    tests = 0
+    failures = 0
+    errors = 0
+    for suite in suites:
+        try:
+            tests += int(suite.attrib.get("tests", "0"))
+            failures += int(suite.attrib.get("failures", "0"))
+            errors += int(suite.attrib.get("errors", "0"))
+        except ValueError:
+            return "malformed", {}, "JUnit evidence contains non-integer test counters."
+    if tests == 0:
+        tests = len([item for item in root.iter() if item.tag.endswith("testcase")])
+        failures = len([item for item in root.iter() if item.tag.endswith("failure")])
+        errors = len([item for item in root.iter() if item.tag.endswith("error")])
+    details = {"tests": tests, "failures": failures, "errors": errors}
+    if failures or errors:
+        return "failed", details, "JUnit evidence reports failing tests."
+    if tests:
+        return "present", details, "JUnit evidence is present and passing."
+    return "insufficient", details, "JUnit evidence exists but contains no test cases."
+
+
+def _test_result_fact(repo: Path, script_state: str, script_refs: list[str], result_refs: list[str], junit_refs: list[str]) -> dict[str, Any]:
+    refs = script_refs + result_refs + junit_refs
+    if not result_refs and not junit_refs:
         summary = "Test command configured." if script_refs else "Test result evidence is missing."
         return _fact("test_result", script_state, summary, refs)
     passed = 0
@@ -258,6 +319,7 @@ def _test_result_fact(repo: Path, script_state: str, script_refs: list[str], res
     stale = 0
     unavailable = 0
     insufficient = 0
+    junit_details: list[dict[str, int]] = []
     now = _now()
     for ref in result_refs:
         data, error = _read_json(repo / ref)
@@ -276,10 +338,22 @@ def _test_result_fact(repo: Path, script_state: str, script_refs: list[str], res
             unavailable += 1
         else:
             insufficient += 1
+    for ref in junit_refs:
+        state, details, summary = _junit_state(repo, ref)
+        if state == "malformed":
+            return _fact("test_result", "malformed", summary, refs)
+        if state == "failed":
+            failed += 1
+        elif state == "present":
+            passed += 1
+        elif state == "insufficient":
+            insufficient += 1
+        if details:
+            junit_details.append(details)
     if failed:
-        return _fact("test_result", "failed", "Test result evidence reports failing tests.", refs)
+        return _fact("test_result", "failed", "Test result evidence reports failing tests.", refs, {"junit": junit_details})
     if passed:
-        return _fact("test_result", "present", "Test result evidence is present and passing.", refs)
+        return _fact("test_result", "present", "Test result evidence is present and passing.", refs, {"junit": junit_details})
     if stale:
         return _fact("test_result", "stale", "Test result evidence is expired.", refs)
     if unavailable:
@@ -287,6 +361,99 @@ def _test_result_fact(repo: Path, script_state: str, script_refs: list[str], res
     if insufficient:
         return _fact("test_result", "insufficient", "Test result evidence exists but lacks a passing or failing status.", refs)
     return _fact("test_result", script_state, "Test result evidence is missing.", refs)
+
+
+def _cyclonedx_json_details(data: dict[str, Any]) -> tuple[bool, dict[str, Any]]:
+    components = data.get("components", [])
+    metadata = data.get("metadata") if isinstance(data.get("metadata"), dict) else {}
+    valid = data.get("bomFormat") == "CycloneDX" or isinstance(components, list)
+    return valid, {
+        "format": str(data.get("bomFormat") or "json"),
+        "component_count": len(components) if isinstance(components, list) else 0,
+        "metadata_component": bool(metadata.get("component")),
+    }
+
+
+def _cyclonedx_xml_details(repo: Path, ref: str) -> tuple[str, dict[str, Any], str]:
+    root, error = _read_xml(repo / ref)
+    if error or root is None:
+        return "malformed", {}, f"SBOM evidence could not be parsed: {error}"
+    tag = root.tag.split("}")[-1]
+    if tag != "bom":
+        return "insufficient", {}, "SBOM XML evidence is not a CycloneDX bom document."
+    components = [item for item in root.iter() if item.tag.split("}")[-1] == "component"]
+    return "present", {"format": "CycloneDX XML", "component_count": len(components)}, "CycloneDX SBOM evidence is present."
+
+
+def _dependency_reference_fact(repo: Path, lock_refs: list[str], sbom_refs: list[str], dependency_review_refs: list[str]) -> dict[str, Any]:
+    refs = lock_refs + sbom_refs + dependency_review_refs
+    sbom_details: list[dict[str, Any]] = []
+    for ref in sbom_refs:
+        if ref.endswith(".json"):
+            data, error = _read_json(repo / ref)
+            if error or data is None:
+                return _fact("dependency_reference", "malformed", f"SBOM evidence could not be parsed: {error}", refs)
+            valid, details = _cyclonedx_json_details(data)
+            if not valid:
+                return _fact("dependency_reference", "insufficient", "SBOM JSON evidence lacks CycloneDX metadata.", refs)
+            sbom_details.append(details)
+        elif ref.endswith(".xml"):
+            state, details, summary = _cyclonedx_xml_details(repo, ref)
+            if state != "present":
+                return _fact("dependency_reference", state, summary, refs)
+            sbom_details.append(details)
+    if lock_refs or sbom_refs or dependency_review_refs:
+        return _fact(
+            "dependency_reference",
+            "present",
+            "Dependency lockfile, SBOM, or dependency review evidence reference present.",
+            refs,
+            {"sbom": sbom_details},
+        )
+    return _fact("dependency_reference", "missing", "Dependency/SBOM reference evidence is missing.", refs)
+
+
+def _terraform_plan_fact(repo: Path, refs: list[str]) -> dict[str, Any]:
+    if not refs:
+        return _fact("terraform_plan", "missing", "Terraform plan evidence is missing.")
+    for ref in refs:
+        data, error = _read_json(repo / ref)
+        if error or data is None:
+            return _fact("terraform_plan", "malformed", f"Terraform plan evidence could not be parsed: {error}", refs)
+        resource_changes = data.get("resource_changes")
+        if not isinstance(resource_changes, list):
+            return _fact("terraform_plan", "insufficient", "Terraform plan evidence lacks resource_changes.", refs)
+        actions: dict[str, int] = {}
+        for change in resource_changes:
+            if not isinstance(change, dict):
+                continue
+            plan_change = change.get("change") if isinstance(change.get("change"), dict) else {}
+            for action in plan_change.get("actions", []) if isinstance(plan_change.get("actions"), list) else []:
+                actions[str(action)] = actions.get(str(action), 0) + 1
+        return _fact("terraform_plan", "present", "Terraform plan evidence is present.", refs, {"resource_change_count": len(resource_changes), "actions": actions})
+    return _fact("terraform_plan", "missing", "Terraform plan evidence is missing.")
+
+
+def _secret_scan_fact(repo: Path, refs: list[str]) -> dict[str, Any]:
+    if not refs:
+        return _fact("secret_scan", "missing", "Secret scan evidence is missing.")
+    total_findings = 0
+    for ref in refs:
+        try:
+            data = json.loads((repo / ref).read_text(encoding="utf-8"))
+        except (json.JSONDecodeError, OSError, UnicodeDecodeError) as exc:
+            return _fact("secret_scan", "malformed", f"Secret scan evidence could not be parsed: {exc}", refs)
+        findings = []
+        if isinstance(data, dict):
+            findings = data.get("findings", data.get("results", data.get("leaks", [])))
+        if isinstance(data, list):
+            findings = data
+        if not isinstance(findings, list):
+            return _fact("secret_scan", "insufficient", "Secret scan evidence lacks a findings/results/leaks array.", refs)
+        total_findings += len(findings)
+    if total_findings:
+        return _fact("secret_scan", "failed", f"Secret scan evidence contains {total_findings} finding(s).", refs, {"finding_count": total_findings})
+    return _fact("secret_scan", "negative", "Secret scan evidence is present and contains no findings.", refs, {"finding_count": 0})
 
 
 def _owner_approval_fact(repo: Path, refs: list[str]) -> dict[str, Any]:
@@ -338,23 +505,17 @@ def evidence_from_signals(repo: Path, signals: dict[str, Any]) -> list[dict[str,
     ci_refs = list(signals.get("ci_configs", []))
     test_refs = list(signals.get("test_scripts", []))
     test_result_refs = list(signals.get("test_result_refs", []))
+    junit_refs = list(signals.get("junit_refs", []))
     lint_refs = list(signals.get("lint_refs", []))
     lock_refs = list(signals.get("lockfiles", []))
     sbom_refs = list(signals.get("sbom_refs", []))
     dependency_review_refs = list(signals.get("dependency_review_refs", []))
     evidence = [
         _fact("ci_status", "present" if ci_refs else "missing", "CI configuration present." if ci_refs else "CI status evidence is missing.", ci_refs),
-        _test_result_fact(repo, signals.get("test_script_state", "missing"), test_refs, test_result_refs),
+        _test_result_fact(repo, signals.get("test_script_state", "missing"), test_refs, test_result_refs, junit_refs),
         _fact("lint_result", "present" if lint_refs else "missing", "Lint evidence reference present." if lint_refs else "Lint evidence is missing.", lint_refs),
         _sarif_fact(repo, list(signals.get("sarif_files", []))),
-        _fact(
-            "dependency_reference",
-            "present" if lock_refs or sbom_refs or dependency_review_refs else "missing",
-            "Dependency lockfile, SBOM, or dependency review evidence reference present."
-            if lock_refs or sbom_refs or dependency_review_refs
-            else "Dependency/SBOM reference evidence is missing.",
-            lock_refs + sbom_refs + dependency_review_refs,
-        ),
+        _dependency_reference_fact(repo, lock_refs, sbom_refs, dependency_review_refs),
         _owner_approval_fact(repo, list(signals.get("owner_approval_refs", []))),
         _fact("github_actions_artifact", "present" if ci_refs else "missing", "GitHub Actions workflow reference present." if ci_refs else "GitHub Actions artifact/reference evidence is missing.", ci_refs),
         _fact("security_doc", "present" if signals.get("security") else "missing", "Security policy document present." if signals.get("security") else "Security policy document is missing.", list(signals.get("security", []))),
@@ -400,12 +561,8 @@ def evidence_from_signals(repo: Path, signals: dict[str, Any]) -> list[dict[str,
             "Terraform validation evidence is present." if signals.get("terraform_validation_refs") else "Terraform validation evidence is missing.",
             list(signals.get("terraform_validation_refs", [])),
         ),
-        _fact(
-            "terraform_plan",
-            "present" if signals.get("terraform_plan_refs") else "missing",
-            "Terraform plan evidence is present." if signals.get("terraform_plan_refs") else "Terraform plan evidence is missing.",
-            list(signals.get("terraform_plan_refs", [])),
-        ),
+        _terraform_plan_fact(repo, list(signals.get("terraform_plan_refs", []))),
+        _secret_scan_fact(repo, list(signals.get("secret_scan_refs", []))),
         _fact(
             "docs_site",
             "present" if signals.get("docs_refs") else "missing",

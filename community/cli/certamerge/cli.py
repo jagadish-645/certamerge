@@ -74,9 +74,12 @@ def gate(
     repo: Annotated[Path, typer.Option("--repo")],
     policy: Annotated[Path, typer.Option("--policy")],
     output: Optional[Path] = None,
+    changed_files: Annotated[Optional[Path], typer.Option("--changed-files")] = None,
+    base: Annotated[Optional[str], typer.Option("--base")] = None,
+    head: Annotated[Optional[str], typer.Option("--head")] = None,
 ) -> None:
     try:
-        result = gate_repo(repo, policy, output)
+        result = gate_repo(repo, policy, output, changed_files_path=changed_files, base=base, head=head)
     except ValueError as exc:
         typer.echo(f"Error: {exc}", err=True)
         raise typer.Exit(code=1) from exc

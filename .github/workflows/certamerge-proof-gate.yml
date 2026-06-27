@@ -30,6 +30,8 @@ jobs:
           repo: .
           output: .tmp/certamerge-pr.car.json
           artifact-name: certamerge-pr-car
+          base: ${{ github.event.pull_request.base.sha }}
+          head: ${{ github.event.pull_request.head.sha }}
           fail-on-block: ${{ github.event_name == 'workflow_dispatch' && inputs.fail_on_block || 'false' }}
 
       - name: Verify generated CAR

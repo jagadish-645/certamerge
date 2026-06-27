@@ -21,6 +21,18 @@ inputs:
     description: Name for the uploaded CAR artifact.
     required: false
     default: certamerge-car
+  changed-files:
+    description: Optional newline-delimited changed-files list to scope Gate rule matching.
+    required: false
+    default: ""
+  base:
+    description: Optional base ref or SHA for git diff based change scope.
+    required: false
+    default: ""
+  head:
+    description: Optional head ref or SHA for git diff based change scope.
+    required: false
+    default: ""
 outputs:
   car-path:
     description: Path to the generated Change Authorization Record.
@@ -41,7 +53,17 @@ runs:
       id: gate
       shell: bash
       run: |
-        certamerge gate --repo "${{ inputs.repo }}" --policy "${{ inputs.policy }}" --output "${{ inputs.output }}" | tee certamerge-cli-output.txt
+        args=(gate --repo "${{ inputs.repo }}" --policy "${{ inputs.policy }}" --output "${{ inputs.output }}")
+        if [ -n "${{ inputs.changed-files }}" ]; then
+          args+=(--changed-files "${{ inputs.changed-files }}")
+        fi
+        if [ -n "${{ inputs.base }}" ]; then
+          args+=(--base "${{ inputs.base }}")
+        fi
+        if [ -n "${{ inputs.head }}" ]; then
+          args+=(--head "${{ inputs.head }}")
+        fi
+        certamerge "${args[@]}" | tee certamerge-cli-output.txt
         python - "${{ inputs.output }}" "${{ inputs.artifact-name }}" <<'PY' >> "$GITHUB_OUTPUT"
         import json
         import sys

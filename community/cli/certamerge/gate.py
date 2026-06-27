@@ -3,12 +3,21 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any
 
-from .car import base_car, write_json
+from .car import base_car, resolve_change_scope, write_json
 from .policy import evaluate_policy
 
 
-def gate_repo(repo: Path, policy_path: Path, output: Path | None = None) -> dict[str, Any]:
-    result = evaluate_policy(repo, policy_path)
+def gate_repo(
+    repo: Path,
+    policy_path: Path,
+    output: Path | None = None,
+    changed_files_path: Path | None = None,
+    base: str | None = None,
+    head: str | None = None,
+) -> dict[str, Any]:
+    change_scope = resolve_change_scope(repo, changed_files_path=changed_files_path, base=base, head=head)
+    scoped_files = change_scope["changed_files"] if change_scope["change_context_mode"] != "repo_snapshot" else None
+    result = evaluate_policy(repo, policy_path, scoped_files=scoped_files)
     policy = result["policy"]
     mode = policy["mode"]
     verdict = result["verdict"]
@@ -40,6 +49,7 @@ def gate_repo(repo: Path, policy_path: Path, output: Path | None = None) -> dict
         owner=owner,
         next_action=next_action,
         policy_path=policy_path,
+        change_scope=change_scope,
     )
     if output:
         write_json(output, car)

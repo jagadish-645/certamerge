@@ -18,12 +18,26 @@ jobs:
           policy: .certamerge.yml
           repo: .
           output: certamerge-car.json
+          base: ${{ github.event.pull_request.base.sha }}
+          head: ${{ github.event.pull_request.head.sha }}
           fail-on-block: "false"
 ```
 
 `fail-on-block` defaults to `false` so teams can observe proof gaps before enforcing blocks.
 
 The action does not send source code to a vendor service. It runs inside the workflow environment and emits metadata, evidence states, missing proof, repair missions, a workflow-native proof summary, and a CAR artifact.
+
+## Change Scope Inputs
+
+The action accepts optional PR/change scope inputs:
+
+| Input | Meaning |
+|---|---|
+| `changed-files` | Newline-delimited changed-files file. |
+| `base` | Base ref or SHA for `git diff --name-only base...head`. |
+| `head` | Head ref or SHA for `git diff --name-only base...head`. |
+
+If changed files cannot be resolved, CertaMerge records `change_context_mode: repo_snapshot` in the CAR and does not claim PR-diff precision.
 
 ## PR Summary Shape
 

@@ -334,7 +334,7 @@ Do not build yet:
 - compliance certification claims;
 - enterprise feature sprawl before pilot workflow proves value.
 
-## 21. Honest Acquisition-Grade Potential Assessment
+## 21. Honest Long-Term Product Potential Assessment
 
 CertaMerge is more credible after this branch because it now has a concrete wedge:
 
@@ -344,7 +344,7 @@ repo-adaptive proof gap discovery + starter policy + change-bound CAR + local ve
 
 That can become valuable if it keeps strengthening proof integrity, replayability, enterprise evidence governance, and self-hosted trust.
 
-It is not yet acquisition-grade. Acquisition-grade potential depends on:
+It is not yet a mature platform. Long-term product potential depends on:
 
 - real adoption;
 - repeatable proof value on real repos;

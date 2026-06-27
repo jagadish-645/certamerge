@@ -368,7 +368,7 @@ def test_conflicting_owner_approval_golden_fixtures_exist() -> None:
     assert json.loads(denied.read_text(encoding="utf-8"))["decision"] == "denied"
 
 
-@pytest.mark.parametrize("input_name", ["policy", "repo", "output", "fail-on-block", "artifact-name"])
+@pytest.mark.parametrize("input_name", ["policy", "repo", "output", "fail-on-block", "artifact-name", "changed-files", "base", "head"])
 def test_github_action_declares_required_inputs(input_name: str) -> None:
     action = yaml.safe_load((ROOT / "community" / "github-action" / "action.yml").read_text(encoding="utf-8"))
     assert input_name in action["inputs"]
@@ -526,3 +526,88 @@ def test_change_bound_car_records_github_actions_context(tmp_path: Path, monkeyp
     assert car["change"]["github_run_id"] == "123456"
     assert car["change"]["github_run_url"] == "https://github.com/acme/widget/actions/runs/123456"
     assert car["replay"]["change_binding"]["head_sha"] == "c" * 40
+
+
+@pytest.mark.parametrize(
+    ("changed_file", "expected_surface"),
+    [
+        ("docs/index.md", "docs"),
+        (".github/workflows/ci.yml", "deployment"),
+        ("src/auth/session.py", "auth"),
+        ("package-lock.json", "dependency"),
+        ("main.tf", "iac"),
+    ],
+)
+def test_explicit_changed_files_drive_change_scope_and_risk_surfaces(tmp_path: Path, changed_file: str, expected_surface: str) -> None:
+    repo = tmp_path / "repo"
+    write_text(repo / changed_file, "metadata only fixture\n")
+    write_json(repo / ".certamerge" / "evidence" / "test-result.json", {"status": "passed"})
+    write_minimal_policy(tmp_path / "policy.yml")
+    changed_files = tmp_path / "changed-files.txt"
+    write_text(changed_files, changed_file + "\n")
+    car_path = tmp_path / "scoped.car.json"
+
+    result = gate_repo(repo, tmp_path / "policy.yml", output=car_path, changed_files_path=changed_files)
+
+    assert result["verdict"] == "OBSERVE_ONLY_WOULD_ALLOW"
+    assert verify_car(car_path)["valid"] is True
+    car = json.loads(car_path.read_text(encoding="utf-8"))
+    assert car["change"]["change_context_mode"] == "explicit_changed_files"
+    assert car["change"]["changed_files"] == [changed_file]
+    assert car["change"]["changed_file_count"] == 1
+    assert expected_surface in car["risk_surfaces"]
+
+
+def test_git_diff_unavailable_falls_back_to_repo_snapshot_without_fake_changed_files(tmp_path: Path) -> None:
+    repo = tmp_path / "repo"
+    write_text(repo / "src" / "app.py", "print('ok')\n")
+    write_json(repo / ".certamerge" / "evidence" / "test-result.json", {"status": "passed"})
+    write_minimal_policy(tmp_path / "policy.yml")
+    car_path = tmp_path / "fallback.car.json"
+
+    result = gate_repo(repo, tmp_path / "policy.yml", output=car_path, base="missing-base", head="missing-head")
+
+    assert result["verdict"] == "OBSERVE_ONLY_WOULD_ALLOW"
+    assert verify_car(car_path)["valid"] is True
+    car = json.loads(car_path.read_text(encoding="utf-8"))
+    assert car["change"]["change_context_mode"] == "repo_snapshot"
+    assert car["change"]["changed_files"] == []
+    assert "changed_files_git_diff" in car["change"]["unavailable_context"]
+
+
+def test_github_event_context_falls_back_honestly_when_changed_files_are_unavailable(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    event_path = tmp_path / "github-event.json"
+    write_json(
+        event_path,
+        {
+            "number": 42,
+            "pull_request": {
+                "number": 42,
+                "base": {"sha": "b" * 40},
+                "head": {"sha": "c" * 40},
+            },
+        },
+    )
+    monkeypatch.setenv("GITHUB_ACTIONS", "true")
+    monkeypatch.setenv("GITHUB_EVENT_PATH", str(event_path))
+    monkeypatch.setenv("GITHUB_REPOSITORY", "acme/widget")
+    monkeypatch.setenv("GITHUB_RUN_ID", "987654")
+    monkeypatch.setenv("GITHUB_REF", "refs/pull/42/merge")
+    monkeypatch.setenv("GITHUB_SHA", "c" * 40)
+    repo = tmp_path / "repo"
+    write_text(repo / "src" / "auth" / "session.py", "print('ok')\n")
+    write_json(repo / ".certamerge" / "evidence" / "test-result.json", {"status": "passed"})
+    write_minimal_policy(tmp_path / "policy.yml")
+    car_path = tmp_path / "github-fallback.car.json"
+
+    gate_repo(repo, tmp_path / "policy.yml", output=car_path)
+
+    assert verify_car(car_path)["valid"] is True
+    car = json.loads(car_path.read_text(encoding="utf-8"))
+    assert car["change"]["change_context_mode"] == "repo_snapshot"
+    assert car["change"]["pr_number"] == "42"
+    assert car["change"]["base_sha"] == "b" * 40
+    assert car["change"]["head_sha"] == "c" * 40
+    assert car["change"]["github_run_id"] == "987654"
+    assert car["change"]["changed_files"] == []
+    assert "changed_files_git_diff" in car["change"]["unavailable_context"]
