@@ -1,0 +1,5 @@
+{
+  "status": "passed",
+  "summary": "Public docs use non-claim language for security and compliance boundaries and describe CertaMerge as local proof evidence, not certification.",
+  "sensitive": "metadata"
+}

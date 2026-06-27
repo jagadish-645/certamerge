@@ -5,6 +5,7 @@ from pathlib import Path
 from typing import Annotated, Optional
 
 import typer
+import yaml
 
 from .car import write_json
 from .gate import gate_repo
@@ -25,24 +26,47 @@ def verify_car(path: Path) -> None:
 
 @app.command()
 def explain_car(path: Path) -> None:
-    typer.echo(explain_car_text(path))
+    try:
+        typer.echo(explain_car_text(path))
+    except ValueError as exc:
+        typer.echo(f"Error: {exc}", err=True)
+        raise typer.Exit(code=1) from exc
 
 
 @app.command()
-def recover(repo: Path, output: Optional[Path] = None) -> None:
+def recover(repo: Path, output: Optional[Path] = None, suggest_policy: bool = False) -> None:
     snapshot = recover_repo(repo)
     if output:
         write_json(output, snapshot)
+    profile = snapshot["profile"]
     typer.echo(f"Verdict: {snapshot['verdict']}")
-    typer.echo("Policy reason: Recover checks basic proof signals without claiming security correctness.")
+    typer.echo("Policy reason: Recover checks repo-adaptive proof signals without claiming security correctness.")
+    typer.echo(f"Repo profile: {profile['type']}")
+    typer.echo("Ecosystems: " + ", ".join(profile["ecosystems"]))
     if snapshot["missing_proof"]:
         typer.echo("Missing proof: " + ", ".join(item["type"] for item in snapshot["missing_proof"]))
     else:
         typer.echo("Missing proof: No missing proof required by current policy.")
     action = "Review generated repair missions and rerun CertaMerge after evidence is present."
     typer.echo(f"Accountable next action: repo-owner - {action}")
+    if suggest_policy:
+        typer.echo("Suggested policy:")
+        typer.echo(yaml.safe_dump(snapshot["suggested_policy"], sort_keys=False).rstrip())
     if output:
         typer.echo(f"Repo Proof Snapshot: {output}")
+
+
+@app.command("suggest-policy")
+def suggest_policy(repo: Path, output: Optional[Path] = None) -> None:
+    snapshot = recover_repo(repo)
+    policy = snapshot["suggested_policy"]
+    rendered = yaml.safe_dump(policy, sort_keys=False)
+    if output:
+        output.parent.mkdir(parents=True, exist_ok=True)
+        output.write_text(rendered, encoding="utf-8")
+        typer.echo(f"Suggested policy: {output}")
+    else:
+        typer.echo(rendered.rstrip())
 
 
 @app.command()
@@ -50,9 +74,12 @@ def gate(
     repo: Annotated[Path, typer.Option("--repo")],
     policy: Annotated[Path, typer.Option("--policy")],
     output: Optional[Path] = None,
+    changed_files: Annotated[Optional[Path], typer.Option("--changed-files")] = None,
+    base: Annotated[Optional[str], typer.Option("--base")] = None,
+    head: Annotated[Optional[str], typer.Option("--head")] = None,
 ) -> None:
     try:
-        result = gate_repo(repo, policy, output)
+        result = gate_repo(repo, policy, output, changed_files_path=changed_files, base=base, head=head)
     except ValueError as exc:
         typer.echo(f"Error: {exc}", err=True)
         raise typer.Exit(code=1) from exc

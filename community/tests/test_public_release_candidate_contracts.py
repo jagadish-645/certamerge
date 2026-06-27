@@ -129,6 +129,84 @@ def test_ci_contains_release_candidate_smoke_checks(required_ci_fragment: str) -
     assert required_ci_fragment in workflow_text
 
 
+def test_self_dogfood_workflow_runs_certamerge_on_this_repo() -> None:
+    workflow = yaml.safe_load(text(".github/workflows/certamerge-proof-gate.yml"))
+    assert "pull_request" in workflow[True]
+    job_text = text(".github/workflows/certamerge-proof-gate.yml")
+    assert "uses: ./community/github-action" in job_text
+    assert "policy: .certamerge.yml" in job_text
+    assert "repo: ." in job_text
+    assert ".tmp/certamerge-pr.car.json" in job_text
+    assert "python -m certamerge verify-car .tmp/certamerge-pr.car.json" in job_text
+    assert "certamerge-pr-car" in job_text
+
+
+@pytest.mark.parametrize(
+    "required_path",
+    [
+        ".github/ISSUE_TEMPLATE/bug_report.md",
+        ".github/ISSUE_TEMPLATE/alpha_feedback.md",
+        ".github/ISSUE_TEMPLATE/proof_gap_example.md",
+        ".github/ISSUE_TEMPLATE/evidence_adapter_request.md",
+        ".github/PULL_REQUEST_TEMPLATE.md",
+        "docs/community/feedback.md",
+        "docs/community/self-dogfooding.md",
+    ],
+)
+def test_self_dogfood_feedback_and_template_surfaces_exist(required_path: str) -> None:
+    assert (ROOT / required_path).is_file()
+
+
+@pytest.mark.parametrize(
+    "forbidden_fragment",
+    [
+        "C:\\Users\\",
+        "sk-",
+        "gh" + "p_",
+        "github" + "_pat_",
+        "BEGIN " + "PRIVATE KEY",
+    ],
+)
+def test_public_templates_do_not_contain_local_paths_or_token_shapes(forbidden_fragment: str) -> None:
+    template_paths = [
+        ".github/ISSUE_TEMPLATE/bug_report.md",
+        ".github/ISSUE_TEMPLATE/alpha_feedback.md",
+        ".github/ISSUE_TEMPLATE/proof_gap_example.md",
+        ".github/ISSUE_TEMPLATE/evidence_adapter_request.md",
+        ".github/PULL_REQUEST_TEMPLATE.md",
+        "docs/community/feedback.md",
+        "docs/community/self-dogfooding.md",
+    ]
+    combined = "\n".join(text(path) for path in template_paths)
+    assert forbidden_fragment not in combined
+
+
+@pytest.mark.parametrize(
+    "required_phrase",
+    [
+        "Why It Matters",
+        "CertaMerge Proof",
+        "Verdict:",
+        "Policy reason:",
+        "Missing proof:",
+        "Accountable next action:",
+        "CAR:",
+        "Verification:",
+        "Limitations:",
+    ],
+)
+def test_pull_request_template_requires_certamerge_proof_language(required_phrase: str) -> None:
+    assert required_phrase in text(".github/PULL_REQUEST_TEMPLATE.md")
+
+
+@pytest.mark.parametrize("command_name", ["verify-car", "explain-car"])
+def test_car_reader_commands_return_nonzero_for_missing_file(command_name: str, tmp_path: Path) -> None:
+    missing = tmp_path / "missing.car.json"
+    result = CliRunner().invoke(app, [command_name, str(missing)])
+    assert result.exit_code == 1
+    assert "CAR file could not be read" in result.output
+
+
 @pytest.mark.parametrize(
     "required_path",
     [

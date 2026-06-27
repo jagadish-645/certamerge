@@ -6,18 +6,84 @@ from typing import Any
 
 from jsonschema import Draft202012Validator
 
-from .car import stable_hash
+from .car import file_hash, stable_hash
 from .schema import CAR_SCHEMA, EVIDENCE_STATES
 
 
 def load_car(path: Path) -> dict[str, Any]:
     try:
         data = json.loads(path.read_text(encoding="utf-8"))
+    except OSError as exc:
+        raise ValueError(f"CAR file could not be read: {exc}") from exc
     except json.JSONDecodeError as exc:
         raise ValueError(f"CAR JSON could not be parsed: {exc}") from exc
     if not isinstance(data, dict):
         raise ValueError("CAR must be a JSON object.")
     return data
+
+
+def _valid_sha256(value: Any) -> bool:
+    return isinstance(value, str) and value.startswith("sha256:") and len(value) == 71
+
+
+def _resolve_path(path_text: str, repo_path: str | None) -> Path:
+    path = Path(path_text)
+    if path.is_absolute():
+        return path
+    if repo_path:
+        return Path(repo_path) / path
+    return path
+
+
+def _policy_source_errors(car: dict[str, Any]) -> list[str]:
+    errors = []
+    policy = car.get("policy", {})
+    source = policy.get("policy_source")
+    if not isinstance(source, dict):
+        return errors
+    recorded_hash = source.get("file_hash")
+    if not _valid_sha256(recorded_hash):
+        errors.append("Policy file hash is missing or invalid for policy_source.")
+        return errors
+    path_text = source.get("resolved_path") or source.get("path")
+    if not isinstance(path_text, str) or not path_text:
+        errors.append("Policy source path is missing.")
+        return errors
+    actual_hash = file_hash(Path(path_text))
+    if actual_hash is None:
+        errors.append(f"Policy source file is unavailable for verification: {path_text}.")
+    elif actual_hash != recorded_hash:
+        errors.append("Policy file hash does not match policy_source.file_hash.")
+    return errors
+
+
+def _evidence_artifact_errors(car: dict[str, Any]) -> list[str]:
+    errors = []
+    repository = car.get("repository", {})
+    repo_path = repository.get("repo_path") if isinstance(repository, dict) else None
+    for item in car.get("evidence", []):
+        if not isinstance(item, dict):
+            continue
+        artifact_hashes = item.get("artifact_hashes", [])
+        if not isinstance(artifact_hashes, list):
+            continue
+        for artifact in artifact_hashes:
+            if not isinstance(artifact, dict):
+                continue
+            path_text = artifact.get("path")
+            recorded_hash = artifact.get("content_hash")
+            if not isinstance(path_text, str) or not path_text:
+                errors.append(f"Evidence {item.get('evidence_id', '<unknown>')} has an artifact hash without a path.")
+                continue
+            if not _valid_sha256(recorded_hash):
+                errors.append(f"Evidence artifact hash for {path_text} is missing or invalid.")
+                continue
+            actual_hash = file_hash(_resolve_path(path_text, repo_path if isinstance(repo_path, str) else None))
+            if actual_hash is None:
+                errors.append(f"Evidence artifact is unavailable for verification: {path_text}.")
+            elif actual_hash != recorded_hash:
+                errors.append(f"Evidence artifact hash mismatch for {path_text}.")
+    return errors
 
 
 def validate_car(car: dict[str, Any]) -> list[str]:
@@ -51,6 +117,8 @@ def validate_car(car: dict[str, Any]) -> list[str]:
         computed = stable_hash({key: value for key, value in car.items() if key != "integrity"})
         if content_hash != computed:
             errors.append("CAR integrity content_hash does not match canonical CAR content.")
+    errors.extend(_policy_source_errors(car))
+    errors.extend(_evidence_artifact_errors(car))
     return sorted(set(errors))
 
 
@@ -81,5 +149,7 @@ def explain_car(path: Path) -> str:
         "Missing proof: " + (", ".join(item.get("type", "unknown") for item in missing) if missing else "No missing proof required by current policy."),
         f"Accountable next action: {next_action.get('owner', '<missing>')} - {next_action.get('action', '<missing>')}",
         f"CAR state: {car.get('record_state', '<missing>')}",
+        f"Commit: {car.get('change', {}).get('current_commit_sha', '<missing>')}",
+        f"Policy hash: {car.get('policy', {}).get('policy_hash', '<missing>')}",
     ]
     return "\n".join(lines)

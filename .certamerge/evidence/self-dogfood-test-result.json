@@ -1,0 +1,6 @@
+{
+  "status": "passed",
+  "summary": "Local self-dogfood verification passed: python -m pytest -q reported 215 passed after policy hardening evidence expansion.",
+  "command": "python -m pytest -q",
+  "sensitive": "metadata"
+}

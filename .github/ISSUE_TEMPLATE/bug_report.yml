@@ -19,9 +19,6 @@ body:
     attributes:
       label: Reproduction steps
       description: Provide the smallest safe reproduction using sample files when possible.
-      placeholder: |
-        1. Run ...
-        2. See ...
     validations:
       required: true
   - type: textarea

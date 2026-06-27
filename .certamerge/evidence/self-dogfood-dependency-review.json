@@ -1,0 +1,5 @@
+{
+  "status": "reviewed",
+  "summary": "Dependency review evidence for packaging-policy proof. CertaMerge community package depends on Typer, PyYAML, jsonschema, and pydantic.",
+  "sensitive": "metadata"
+}

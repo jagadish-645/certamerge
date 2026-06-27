@@ -1,0 +1,15 @@
+{
+  "status": "passed",
+  "summary": "Self-dogfood branch classifies touched areas as CLI/verifier, CAR, GitHub Action/workflow, tests, docs, samples, specs, and packaging surfaces.",
+  "risk_surfaces": [
+    "cli",
+    "car_integrity",
+    "workflow",
+    "tests",
+    "docs",
+    "samples",
+    "specs",
+    "packaging"
+  ],
+  "sensitive": "metadata"
+}

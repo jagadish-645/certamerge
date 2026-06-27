@@ -57,6 +57,7 @@ The local test suite and CI workflow validate:
 - artifact name can be customized to avoid collisions in multi-job validation workflows;
 - summary step writes to `GITHUB_STEP_SUMMARY`;
 - blocking state list includes `OBSERVE_ONLY_WOULD_BLOCK`;
+- summary body includes verdict, policy reason, matched rules, evidence states, missing proof, accountable next action, CAR artifact, and verification command;
 - default behavior is non-blocking.
 
 ## Example Caller Workflow
@@ -115,3 +116,21 @@ docs/release/GITHUB_ACTION_LIVE_VALIDATION_CHECKLIST.md
 ```
 
 Public release should not claim the GitHub Action is production-proven until that checklist has evidence from a real GitHub Actions run.
+
+## Self-Dogfood PR Validation
+
+The public repository also includes:
+
+```text
+.github/workflows/certamerge-proof-gate.yml
+```
+
+This workflow runs CertaMerge on the repository that contains CertaMerge. It must:
+
+- use `./community/github-action`;
+- evaluate `repo: .`;
+- read `.certamerge.yml`;
+- write `.tmp/certamerge-pr.car.json`;
+- upload the `certamerge-pr-car` artifact;
+- verify the CAR with `python -m certamerge verify-car .tmp/certamerge-pr.car.json`;
+- stay non-blocking by default until branch-protection rollout is intentional.

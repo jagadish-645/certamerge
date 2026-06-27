@@ -45,7 +45,7 @@ Expected Recover shape:
 
 ```text
 Verdict: NEEDS_EVIDENCE
-Policy reason: Recover checks basic proof signals without claiming security correctness.
+Policy reason: Recover checks repo-adaptive proof signals without claiming security correctness.
 Missing proof: test_result, ci_status, owner_approval
 Accountable next action: repo-owner - Review generated repair missions and rerun CertaMerge after evidence is present.
 ```
@@ -117,9 +117,36 @@ See:
 - [Community quickstart](docs/community/quickstart.md)
 - [Alpha limitations](docs/community/alpha-limitations.md)
 - [CAR integrity](docs/community/car-integrity.md)
+- [CAR signing status](docs/community/car-signing.md)
+- [PR-diff-aware proof](docs/community/pr-diff-aware-proof.md)
+- [Evidence adapters](docs/community/evidence-adapters.md)
 - [No source egress](docs/community/no-source-egress.md)
+- [Self-dogfooding](docs/community/self-dogfooding.md)
 - [5-minute demo](docs/demo/5_MINUTE_PUBLIC_ALPHA_DEMO.md)
 - [GitHub Action validation](docs/community/github-action-validation.md)
+
+## Example Policy
+
+A minimal `.certamerge.yml` can require proof for sensitive paths:
+
+```yaml
+version: 0.1
+mode: observe
+rules:
+  - id: CM-AUTH-001
+    when:
+      paths:
+        - "src/auth/**"
+        - "app/auth/**"
+    require:
+      evidence:
+        - tests
+        - owner_approval
+    verdict_if_missing: NEEDS_EVIDENCE
+    reason: "Auth changes require test and owner approval proof."
+```
+
+In observe mode, CertaMerge records what would be allowed or blocked without becoming a hard merge gate.
 
 ## Safe Language
 

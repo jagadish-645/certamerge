@@ -129,6 +129,92 @@ def test_negative_sarif_satisfies_security_scan_requirement(tmp_path: Path) -> N
     assert sarif["state"] == "negative"
 
 
+def test_junit_pass_counts_as_present_test_result(tmp_path: Path) -> None:
+    repo = make_repo(tmp_path)
+    write_text(repo / "reports" / "junit.xml", '<testsuite tests="2" failures="0" errors="0"><testcase name="a"/><testcase name="b"/></testsuite>')
+
+    assert evidence_state(repo, "test_result") == "present"
+
+
+def test_junit_failure_counts_as_failed_test_result(tmp_path: Path) -> None:
+    repo = make_repo(tmp_path)
+    write_text(repo / "reports" / "junit.xml", '<testsuite tests="2" failures="1" errors="0"><testcase name="a"><failure /></testcase></testsuite>')
+
+    assert evidence_state(repo, "test_result") == "failed"
+
+
+def test_malformed_junit_counts_as_malformed_test_result(tmp_path: Path) -> None:
+    repo = make_repo(tmp_path)
+    write_text(repo / "reports" / "junit.xml", "<testsuite")
+
+    assert evidence_state(repo, "test_result") == "malformed"
+
+
+def test_cyclonedx_sbom_counts_as_present_dependency_reference(tmp_path: Path) -> None:
+    repo = make_repo(tmp_path)
+    write_data(
+        repo / "reports" / "sbom.json",
+        {
+            "bomFormat": "CycloneDX",
+            "specVersion": "1.5",
+            "components": [{"type": "library", "name": "example", "version": "1.0.0"}],
+        },
+    )
+
+    assert evidence_state(repo, "dependency_reference") == "present"
+
+
+def test_malformed_sbom_counts_as_malformed_dependency_reference(tmp_path: Path) -> None:
+    repo = make_repo(tmp_path)
+    write_text(repo / "reports" / "sbom.json", "{not-json")
+
+    assert evidence_state(repo, "dependency_reference") == "malformed"
+
+
+def test_terraform_plan_json_counts_as_present_plan_evidence(tmp_path: Path) -> None:
+    repo = make_repo(tmp_path)
+    write_data(
+        repo / "terraform-plan.json",
+        {
+            "format_version": "1.2",
+            "resource_changes": [
+                {"address": "aws_s3_bucket.logs", "change": {"actions": ["create"]}},
+                {"address": "aws_iam_role.app", "change": {"actions": ["update"]}},
+            ],
+        },
+    )
+
+    assert evidence_state(repo, "terraform_plan") == "present"
+
+
+def test_malformed_terraform_plan_counts_as_malformed_plan_evidence(tmp_path: Path) -> None:
+    repo = make_repo(tmp_path)
+    write_text(repo / "terraform-plan.json", "{not-json")
+
+    assert evidence_state(repo, "terraform_plan") == "malformed"
+
+
+def test_gitleaks_empty_json_counts_as_negative_secret_scan(tmp_path: Path) -> None:
+    repo = make_repo(tmp_path)
+    write_data(repo / "reports" / "gitleaks.json", [])
+
+    assert evidence_state(repo, "secret_scan") == "negative"
+
+
+def test_gitleaks_findings_count_as_failed_secret_scan(tmp_path: Path) -> None:
+    repo = make_repo(tmp_path)
+    write_data(repo / "reports" / "gitleaks.json", [{"RuleID": "generic-api-key", "File": "src/app.py"}])
+
+    assert evidence_state(repo, "secret_scan") == "failed"
+
+
+def test_malformed_gitleaks_counts_as_malformed_secret_scan(tmp_path: Path) -> None:
+    repo = make_repo(tmp_path)
+    write_text(repo / "reports" / "gitleaks.json", "{not-json")
+
+    assert evidence_state(repo, "secret_scan") == "malformed"
+
+
 def test_stale_owner_approval_stays_needs_evidence(tmp_path: Path) -> None:
     repo = make_repo(tmp_path)
     write_data(
@@ -147,6 +233,42 @@ def test_stale_owner_approval_stays_needs_evidence(tmp_path: Path) -> None:
 
     assert result["verdict"] == "NEEDS_EVIDENCE"
     assert result["missing_proof"][0]["state"] == "stale"
+
+
+def test_unavailable_test_evidence_stays_needs_evidence(tmp_path: Path) -> None:
+    repo = make_repo(tmp_path)
+    write_data(repo / ".certamerge" / "evidence" / "test-result.json", {"status": "unavailable"})
+    policy = tmp_path / "policy.yml"
+    write_policy(policy, "tests")
+
+    result = gate_repo(repo, policy)
+
+    assert result["verdict"] == "NEEDS_EVIDENCE"
+    assert result["missing_proof"][0]["state"] == "unavailable"
+
+
+def test_insufficient_test_evidence_stays_needs_evidence(tmp_path: Path) -> None:
+    repo = make_repo(tmp_path)
+    write_data(repo / ".certamerge" / "evidence" / "test-result.json", {"summary": "test evidence exists but no status is present"})
+    policy = tmp_path / "policy.yml"
+    write_policy(policy, "tests")
+
+    result = gate_repo(repo, policy)
+
+    assert result["verdict"] == "NEEDS_EVIDENCE"
+    assert result["missing_proof"][0]["state"] == "insufficient"
+
+
+def test_unavailable_owner_approval_stays_needs_evidence(tmp_path: Path) -> None:
+    repo = make_repo(tmp_path)
+    write_data(repo / ".certamerge" / "evidence" / "owner-approval.json", {"owner": "auth-owner", "decision": "unavailable"})
+    policy = tmp_path / "policy.yml"
+    write_policy(policy, "owner_approval")
+
+    result = gate_repo(repo, policy)
+
+    assert result["verdict"] == "NEEDS_EVIDENCE"
+    assert result["missing_proof"][0]["state"] == "unavailable"
 
 
 def test_conflicting_owner_approval_blocks_and_records_conflict(tmp_path: Path) -> None:

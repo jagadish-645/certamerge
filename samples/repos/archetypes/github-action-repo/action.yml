@@ -1,0 +1,14 @@
+name: Fixture Proof Action
+description: Emits a deterministic fixture proof summary
+inputs:
+  subject:
+    description: Subject to summarize
+    required: true
+outputs:
+  summary:
+    description: Generated summary path
+runs:
+  using: composite
+  steps:
+    - shell: bash
+      run: python scripts/main.py "${{ inputs.subject }}"

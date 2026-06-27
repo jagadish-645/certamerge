@@ -1,0 +1,3 @@
+apps/web/ @platform-web
+apps/api/ @platform-api
+packages/core/ @platform-core

@@ -4,6 +4,10 @@
 
 -
 
+## Why It Matters
+
+-
+
 ## Product Boundary
 
 - [ ] Strengthens evidence collection, risk classification, deterministic policy decision, or CAR/proof verification.
@@ -18,6 +22,29 @@
 - [ ] `python -m certamerge gate --repo samples/repos/payment-change-with-tests --policy samples/policies/payment.certamerge.yml --output .tmp/payment.car.json`
 - [ ] `python -m certamerge verify-car .tmp/payment.car.json`
 - [ ] `python -m pytest`
+
+## CertaMerge Proof
+
+Verdict:
+
+Policy reason:
+
+Missing proof:
+
+Accountable next action:
+
+CAR:
+
+Verification:
+
+Limitations:
+
+Recommended local self-check:
+
+```powershell
+python -m certamerge gate --repo . --policy .certamerge.yml --output .tmp/certamerge-pr.car.json
+python -m certamerge verify-car .tmp/certamerge-pr.car.json
+```
 
 ## Data Safety
 

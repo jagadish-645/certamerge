@@ -10,7 +10,7 @@ import yaml
 from .evidence import SATISFYING_EVIDENCE_STATES, evidence_for_required, normalize_required_evidence
 from .recover import recover_repo
 from .repair import repair_missions_for_missing
-from .risk import iter_repo_files
+from .risk import detect_risk_surfaces, iter_repo_files
 
 
 class PolicyError(ValueError):
@@ -72,11 +72,13 @@ def proof_gap_for_required(required: str, rule: dict[str, Any], snapshot: dict[s
     }
 
 
-def evaluate_policy(repo: Path, policy_path: Path) -> dict[str, Any]:
+def evaluate_policy(repo: Path, policy_path: Path, scoped_files: list[str] | None = None) -> dict[str, Any]:
     repo = repo.resolve()
     policy = load_policy(policy_path)
     snapshot = recover_repo(repo)
-    files = iter_repo_files(repo)
+    files = [Path(value) for value in scoped_files] if scoped_files else iter_repo_files(repo)
+    if scoped_files is not None:
+        snapshot = {**snapshot, "risk_surfaces": detect_risk_surfaces(files)}
     missing = []
     trace = []
     matched_rules = []
@@ -109,7 +111,7 @@ def evaluate_policy(repo: Path, policy_path: Path) -> dict[str, Any]:
         )
     if not matched_rules:
         verdict = "ALLOW"
-        reason = "No policy rules matched this repository snapshot."
+        reason = "No policy rules matched this change scope."
     elif missing:
         if any(item["state"] in {"failed", "conflicting"} for item in missing):
             verdict = "BLOCK"

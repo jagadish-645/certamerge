@@ -7,7 +7,7 @@
     "change_id": "local_repo_snapshot",
     "change_type": "repo_snapshot",
     "source_system": "local",
-    "source_ref": "C:\\Users\\Jagadish\\Desktop\\CertaMerge\\samples\\repos\\basic-node-app",
+    "source_ref": "samples/repos/basic-node-app",
     "base_ref": "unknown",
     "head_ref": "working_tree",
     "created_at": "2026-06-25T06:54:42Z"
@@ -88,7 +88,7 @@
   },
   "integrity": {
     "canonicalization": "certamerge-json-canonical-v0",
-    "content_hash": "sha256:82de8007d2e94d6e59e7a17b0be5db559b35fa2800afd59faf3515d4ba5b8b93",
+    "content_hash": "sha256:913270bfc7759fbc608fe5a595483cf47302578fc9d25b8fa0cfb9ea03f7c30a",
     "hash_algorithm": "sha256",
     "verifier_version": "certamerge-community-0.1.0"
   },

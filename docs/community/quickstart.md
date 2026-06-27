@@ -45,7 +45,9 @@ Expected shape:
 
 ```text
 Verdict: NEEDS_EVIDENCE
-Policy reason: Recover checks basic proof signals without claiming security correctness.
+Policy reason: Recover checks repo-adaptive proof signals without claiming security correctness.
+Repo profile: node-typescript-app
+Ecosystems: node
 Missing proof: test_result, ci_status, owner_approval
 Accountable next action: repo-owner - Review generated repair missions and rerun CertaMerge after evidence is present.
 ```
@@ -88,7 +90,7 @@ Expected shape:
 }
 ```
 
-The verifier checks schema rules, verdict consistency, evidence-state consistency, and the CAR content hash.
+The verifier checks schema rules, verdict consistency, evidence-state consistency, the CAR content hash, and change-bound policy/evidence hashes when present.
 
 ## Explain The CAR
 
@@ -105,6 +107,8 @@ Policy reason: All matched policy requirements are satisfied.
 Missing proof: No missing proof required by current policy.
 Accountable next action: repo-owner - Proceed with record.
 CAR state: final
+Commit: <commit-or-unavailable>
+Policy hash: sha256:...
 ```
 
 ## Try A Would-Block Sample
@@ -122,6 +126,17 @@ OBSERVE_ONLY_WOULD_BLOCK
 
 This sample demonstrates the safe rollout posture: CertaMerge can show what would block without breaking a team during initial adoption.
 
+## Run CertaMerge On CertaMerge
+
+This repository includes a self-dogfood observe-mode policy:
+
+```powershell
+python -m certamerge gate --repo . --policy .certamerge.yml --output .tmp/certamerge-pr.car.json
+python -m certamerge verify-car .tmp/certamerge-pr.car.json
+```
+
+The output should still follow the same grammar: verdict, policy reason, missing proof, accountable next action, and CAR.
+
 ## Data Boundary
 
 CertaMerge Community runs locally. It reads repository metadata, selected configuration files, and evidence references. It does not send source code, raw diffs, tokens, or CARs to a vendor service by default.
@@ -130,6 +145,8 @@ CertaMerge Community runs locally. It reads repository metadata, selected config
 
 - [Alpha limitations](alpha-limitations.md)
 - [CAR integrity](car-integrity.md)
+- [Change-bound proof](change-bound-proof.md)
 - [No source egress](no-source-egress.md)
 - [GitHub Action](github-action.md)
+- [Self-dogfooding](self-dogfooding.md)
 - [Policies](policies.md)
