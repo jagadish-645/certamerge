@@ -69,6 +69,8 @@ The public `certamerge` repository should contain community-safe assets only:
 
 Advanced enterprise deployment, organization-wide policy administration, proprietary policy/risk packs, pilot packets, and internal agent-system artifacts are outside this repository until an explicit open-core publication decision is made.
 
+See [Public Repository Boundary](repository-boundary.md) for the product-facing file-placement rule.
+
 ## When This Becomes Public-Release Ready
 
 Community alpha becomes public-release ready when:
