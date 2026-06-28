@@ -1,34 +1,52 @@
 # CertaMerge
 
-CertaMerge is a local ProofOps tool for software changes. It answers one practical release question:
+CertaMerge is an open-source ProofOps CLI for software changes.
+
+It answers one release question:
 
 ```text
-Does this repo or change have enough evidence to move forward, and can we prove why later?
+Does this change have enough proof to move forward, and can we verify that decision later?
 ```
 
-It is not an AI code reviewer, scanner, chatbot, or compliance certification tool. CertaMerge evaluates evidence and policy, then records the decision in a Change Authorization Record.
+GitHub rules decide whether checks are required.
+Scanners find issues.
+CertaMerge records whether the proof required for a change is present, missing, unavailable, stale, failed, malformed, conflicting, or insufficient - then writes a Change Authorization Record.
+
+It is not an AI code reviewer, scanner, chatbot, dashboard, or compliance certification tool. It evaluates evidence and policy, then records a deterministic proof decision.
 
 ## The First 30 Seconds
 
 | Question | Answer |
 |---|---|
-| What is CertaMerge? | A proof-carrying authorization layer for repos, PRs, and future deploys. Community alpha runs as a local CLI and GitHub Action wrapper. |
-| Why does it exist? | AI-built and fast-moving code needs a durable proof trail before teams trust it in production. |
-| What problem does it solve? | It reduces manual evidence chasing by showing verdict, policy reason, missing proof, owner action, and CAR. |
+| What is CertaMerge? | A local ProofOps CLI and proof-carrying authorization layer for software changes. Community alpha runs as a CLI and GitHub Action wrapper. |
+| Why does it exist? | Fast-moving human and AI-authored code needs a durable proof trail before teams trust it near production. |
+| What problem does it solve? | It reduces manual evidence chasing by showing verdict, policy reason, missing proof, accountable next action, and CAR. |
 | What is a CAR? | A Change Authorization Record: a JSON proof record containing change identity, evidence states, policy trace, verdict, repair missions, and integrity metadata. |
 | Different from AI code review? | CertaMerge does not ask an LLM if code is safe. Final verdicts are deterministic and policy-based. |
-| Different from scanners? | Scanners produce findings. CertaMerge consumes evidence from tools/workflows and decides whether proof is sufficient. |
+| Different from scanners? | Scanners produce findings. CertaMerge consumes proof signals and decides whether required evidence is sufficient. |
 | Install? | `python -m pip install -e .` from this repository. |
 | Local Recover? | `python -m certamerge recover samples/repos/no-ci-vibe-repo` |
 | Proof-only Gate? | `python -m certamerge gate --repo samples/repos/payment-change-with-tests --policy samples/policies/payment.certamerge.yml --output .tmp/payment.car.json` |
 | Verify a CAR? | `python -m certamerge verify-car .tmp/payment.car.json` |
 | Output shape? | Verdict, policy reason, missing proof, accountable next action, CAR. |
 | Community/open source? | CLI, CAR spec/verifier, Recover, proof-only Gate, basic policies, evidence states, repair missions, GitHub Action wrapper, samples, docs. |
-| Enterprise? | Not included in this public community alpha. Advanced org policy, SoD, observe replay, ProofGraph memory, audit export, and self-hosted governance are outside the community package. |
-| Non-claims? | CertaMerge does not make code secure, certify compliance, replace scanners, or guarantee production safety. |
+| Enterprise? | Not included in this public community alpha. Multi-repo ProofOps governance, SoD, observe replay, ProofGraph memory, audit export, and self-hosted enterprise controls live outside this repo. |
+| Non-claims? | CertaMerge does not make code secure, certify compliance, replace scanners, or prove a change is safe. |
 | Alpha limits? | Local/community alpha only; CAR hash integrity exists, cryptographic signing and production deployment hardening are not implemented yet. |
 
-## 5-Minute Quickstart
+## What CertaMerge does
+
+CertaMerge turns repo and change evidence into a proof decision:
+
+- detects missing proof with `recover`;
+- suggests a starter policy from the repo shape;
+- evaluates a repo or scoped change with `gate`;
+- records verdict, policy reason, missing proof, accountable next action, and CAR;
+- verifies and explains CARs offline;
+- gives coding agents machine-readable JSON so they can repair missing proof and rerun the gate;
+- runs locally by default without telemetry or source-code egress.
+
+## Quickstart
 
 From the repository root:
 
@@ -41,7 +59,28 @@ python -m certamerge verify-car .tmp/payment.car.json
 python -m certamerge explain-car .tmp/payment.car.json
 ```
 
-Expected Recover shape:
+## Core workflow
+
+1. Run Recover on a repo to see missing proof.
+2. Generate or choose a policy.
+3. Run Gate on the repo, changed files, or local Git diff.
+4. Store the CAR artifact.
+5. Verify the CAR before trusting or sharing it.
+6. Repair missing proof and rerun.
+
+The product grammar is always:
+
+```text
+Verdict.
+Policy reason.
+Missing proof.
+Accountable next action.
+Change Authorization Record.
+```
+
+## Example output
+
+Recover on a repo with auth-like code and no CI proof:
 
 ```text
 Verdict: NEEDS_EVIDENCE
@@ -50,7 +89,7 @@ Missing proof: test_result, ci_status, owner_approval
 Accountable next action: repo-owner - Review generated repair missions and rerun CertaMerge after evidence is present.
 ```
 
-Expected Gate shape on the payment sample:
+Gate on the payment sample:
 
 ```text
 Verdict: ALLOW
@@ -60,7 +99,7 @@ Accountable next action: repo-owner - Proceed with record.
 CAR: .tmp/payment.car.json
 ```
 
-Expected verification shape:
+CAR verification:
 
 ```json
 {
@@ -72,84 +111,160 @@ Expected verification shape:
 }
 ```
 
-## Product Grammar
+## GitHub Action
 
-Every useful CertaMerge surface must compress complexity into:
+The community package includes a composite action at:
 
 ```text
-Verdict.
-Policy reason.
-Missing proof.
-Accountable next action.
-Change Authorization Record.
+community/github-action/action.yml
 ```
 
-That grammar is the product. Anything that cannot serve it is out of scope for the community release.
+Minimal workflow:
 
-## What Community Alpha Does
+```yaml
+name: CertaMerge Proof Gate
+on:
+  pull_request:
+jobs:
+  certamerge:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./community/github-action
+        with:
+          policy: .certamerge.yml
+          repo: .
+          output: .tmp/certamerge-pr.car.json
+          artifact-name: certamerge-pr-car
+```
 
-- Finds missing proof in local repos with `recover`.
-- Evaluates a repo against YAML policy with `gate`.
-- Keeps evidence states distinct: `present`, `missing`, `unavailable`, `stale`, `malformed`, `failed`, `negative`, `insufficient`, and `conflicting`.
-- Generates finite repair missions for missing proof.
-- Emits CARs with schema checks and SHA-256 content-hash integrity.
-- Verifies and explains CARs offline.
-- Provides a composite GitHub Action wrapper that defaults to non-blocking proof behavior.
-- Runs without telemetry, vendor callbacks, or source-code egress by default.
+The action runs Gate, writes a workflow summary, and uploads the CAR artifact. It defaults to non-blocking proof behavior unless `fail-on-block` is enabled.
 
-## What Community Alpha Does Not Do
+## Agent / JSON usage
 
-- It does not cryptographically sign CARs yet.
-- It does not replace CodeQL, Semgrep, Trivy, Gitleaks, Snyk, or human AppSec review.
-- It does not certify SOC 2, ISO 27001, SLSA, NIST SSDF, or any other standard.
-- It does not ship production enterprise deployment automation yet.
-- It does not include SSO, RBAC, admin UI, hosted SaaS, or dashboard-first workflows.
-- It does not publish raw source code, raw diffs, secrets, or tokens in CAR output by default.
+Coding agents should use JSON output instead of scraping text:
 
-## Repository Boundary
+```powershell
+python -m certamerge recover . --json
+python -m certamerge gate --repo . --policy .certamerge.yml --json --output .tmp/self.car.json
+python -m certamerge explain-car .tmp/self.car.json --json
+```
+
+Agent loop:
+
+1. Read `verdict`, `policy_reason`, `missing_proof`, `repair_missions`, and `accountable_next_action`.
+2. Repair only the missing proof that CertaMerge names.
+3. Rerun `recover` or `gate`.
+4. Verify the CAR before reporting completion.
+
+See [agent workflow](docs/community/agent-workflow.md).
+
+## Change Authorization Records
+
+A Change Authorization Record is the durable output of Gate. It includes:
+
+- change identity and Git context;
+- repository metadata;
+- evidence states;
+- risk surfaces;
+- policy trace;
+- verdict;
+- missing proof;
+- repair missions;
+- accountable next action;
+- integrity metadata.
+
+Community alpha CARs are integrity-bound with verifier-checked SHA-256 content hashes. They are not cryptographically signed yet. Do not claim signer identity or non-repudiation for community alpha CARs.
+
+## Evidence adapters
+
+Community alpha detects proof signals from local metadata and evidence artifacts, including:
+
+- test scripts and test result evidence;
+- CI configuration presence;
+- SARIF scanner evidence;
+- SBOM and dependency references;
+- Terraform plan evidence;
+- secret scan evidence;
+- owner approval evidence;
+- CAR verification evidence.
+
+Evidence states stay distinct: `present`, `missing`, `unavailable`, `stale`, `malformed`, `failed`, `negative`, `insufficient`, and `conflicting`.
+
+## What CertaMerge is not
+
+CertaMerge is not:
+
+- an AI code reviewer;
+- a chatbot;
+- a scanner replacement;
+- a GitHub ruleset clone;
+- a branch protection wrapper;
+- a compliance certificate generator;
+- a dashboard-first product;
+- a SaaS account requirement.
+
+## Security and privacy posture
+
+Community alpha is local-first:
+
+- no telemetry is sent by default;
+- source code, raw diffs, secrets, scanner payloads, CARs, and Repo Proof Snapshots are not sent to a vendor service by default;
+- CARs use metadata, hashes, paths, evidence states, policy IDs, and verdict traces;
+- final authorization does not depend on an LLM;
+- public docs avoid certification or production-readiness claims that the product does not implement.
+
+See [no source egress](docs/community/no-source-egress.md), [AI boundary](docs/community/ai-boundary.md), and [security policy](SECURITY.md).
+
+## Community alpha limitations
+
+Community alpha is useful for local proof discovery and proof-only Gate workflows, but it is not a production enterprise deployment.
+
+Known limits:
+
+- CARs are not cryptographically signed yet;
+- release archives are not signed yet;
+- no hosted service is included;
+- no SSO, RBAC, admin console, durable enterprise store, backup/restore, or production observability is included;
+- GitHub Action behavior that depends on GitHub runners must be validated in GitHub Actions;
+- compliance frameworks may be supported by evidence, but CertaMerge does not certify compliance.
+
+## Enterprise boundary
 
 This repository is the community alpha surface. It contains the local CLI, CAR verifier, proof-only Gate, Recover, basic policy examples, sample repositories, specs, tests, and a composite GitHub Action wrapper.
 
-Advanced organization-wide capabilities are intentionally outside this package until they can be evaluated, documented, and released with a clear open-core boundary.
+The public repository contains only community-safe assets and intentionally excludes advanced enterprise-only code and docs out of the community repository, including:
 
-See:
+- enterprise runtime services;
+- organization-wide policy governance;
+- segregation of duties;
+- observe-mode replay;
+- ProofGraph memory;
+- audit export;
+- support bundle generation;
+- internal strategy and agent-system material.
+
+Advanced enterprise deployment and governance belong in the private enterprise product until they can be released with a clear open-core boundary.
+
+## Contributing / feedback
+
+Useful feedback is concrete:
+
+- a repo shape Recover missed;
+- an evidence type CertaMerge should detect;
+- a CAR verification failure;
+- a confusing proof gap;
+- a GitHub Action issue;
+- a README or quickstart command that does not run.
+
+Start with:
 
 - [Community quickstart](docs/community/quickstart.md)
-- [Alpha limitations](docs/community/alpha-limitations.md)
+- [5-minute demo](docs/demo/5_MINUTE_PUBLIC_ALPHA_DEMO.md)
+- [Recover](docs/community/recover.md)
+- [Suggest policy](docs/community/suggest-policy.md)
+- [Evidence adapters](docs/community/evidence-adapters.md)
 - [CAR integrity](docs/community/car-integrity.md)
 - [CAR signing status](docs/community/car-signing.md)
-- [PR-diff-aware proof](docs/community/pr-diff-aware-proof.md)
-- [Evidence adapters](docs/community/evidence-adapters.md)
-- [No source egress](docs/community/no-source-egress.md)
-- [Self-dogfooding](docs/community/self-dogfooding.md)
-- [5-minute demo](docs/demo/5_MINUTE_PUBLIC_ALPHA_DEMO.md)
-- [GitHub Action validation](docs/community/github-action-validation.md)
-
-## Example Policy
-
-A minimal `.certamerge.yml` can require proof for sensitive paths:
-
-```yaml
-version: 0.1
-mode: observe
-rules:
-  - id: CM-AUTH-001
-    when:
-      paths:
-        - "src/auth/**"
-        - "app/auth/**"
-    require:
-      evidence:
-        - tests
-        - owner_approval
-    verdict_if_missing: NEEDS_EVIDENCE
-    reason: "Auth changes require test and owner approval proof."
-```
-
-In observe mode, CertaMerge records what would be allowed or blocked without becoming a hard merge gate.
-
-## Safe Language
-
-CertaMerge may say it provides machine-checkable evidence that can support review, audit, and change-control workflows.
-
-CertaMerge must not say it makes code secure, guarantees compliance, replaces scanners, or proves a change is safe.
+- [GitHub Action](docs/community/github-action.md)
+- [Feedback](docs/community/feedback.md)
