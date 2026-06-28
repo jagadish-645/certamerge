@@ -8,16 +8,16 @@ Branch:
 grand-finale/open-source-workflow-hardening
 ```
 
-Current pre-merge base commit:
+Current committed evidence branch before PR-link metadata update:
 
 ```text
-34adc564bf552008e40b8db09b687813847cb6c1
+b026f6d
 ```
 
 PR link:
 
 ```text
-Not created yet in this local artifact. Create after final gate and update if GitHub access succeeds.
+https://github.com/jagadish-645/certamerge/pull/6
 ```
 
 ## Workflow Inventory Result
