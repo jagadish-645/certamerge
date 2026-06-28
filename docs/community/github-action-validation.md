@@ -76,7 +76,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: OWNER/certamerge/community/github-action@main
+      - uses: jagadish-645/certamerge/community/github-action@main
         with:
           policy: .certamerge.yml
           repo: .
@@ -85,7 +85,7 @@ jobs:
           fail-on-block: "false"
 ```
 
-Replace `OWNER` with the actual GitHub owner after the public repository is prepared.
+For local repository dogfooding, use `./community/github-action` instead.
 
 ## Live Validation Requirement
 
@@ -109,13 +109,13 @@ Validated run:
 https://github.com/jagadish-645/certamerge/actions/runs/28169666397
 ```
 
-Before public launch, also run the founder-facing checklist in:
+Before public launch, rerun the public workflow and update the public verification notes in:
 
 ```text
-docs/release/GITHUB_ACTION_LIVE_VALIDATION_CHECKLIST.md
+docs/release/V0_1_0_ALPHA_VERIFICATION.md
 ```
 
-Public release should not claim the GitHub Action is production-proven until that checklist has evidence from a real GitHub Actions run.
+Public release should not claim the GitHub Action is production-proven. It is validated for public-alpha proof-only workflows until production branch-protection hardening exists.
 
 ## Self-Dogfood PR Validation
 

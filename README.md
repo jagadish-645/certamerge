@@ -244,7 +244,7 @@ The public repository contains only community-safe assets and intentionally excl
 - support bundle generation;
 - internal strategy and agent-system material.
 
-Advanced enterprise deployment and governance belong in the private enterprise product until they can be released with a clear open-core boundary.
+Advanced enterprise deployment and governance belong in the private enterprise product until they can be released with a clear open-core boundary. See the [public repository boundary](docs/community/repository-boundary.md).
 
 ## Contributing / feedback
 
