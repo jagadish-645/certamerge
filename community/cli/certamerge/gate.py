@@ -57,6 +57,7 @@ def gate_repo(
         "verdict": rendered_verdict,
         "policy_reason": result["policy_reason"],
         "missing_proof": result["missing_proof"],
+        "repair_missions": result["repair_missions"],
         "accountable_next_action": car["accountable_next_action"],
         "car_path": str(output) if output else "",
         "car": car,
