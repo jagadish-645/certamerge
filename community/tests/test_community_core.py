@@ -33,6 +33,8 @@ def test_gate_blocks_auth_change_in_observe_language() -> None:
     assert result["verdict"] == "OBSERVE_ONLY_WOULD_BLOCK"
     missing_types = {item["type"] for item in result["missing_proof"]}
     assert {"tests", "owner_approval"} <= missing_types
+    mission_ids = {mission["mission_id"] for mission in result["repair_missions"]}
+    assert {"R-TESTS-001", "R-OWNER-APPROVAL-001"} <= mission_ids
     assert result["accountable_next_action"]["owner"] == "policy-owner"
 
 
@@ -156,6 +158,7 @@ def test_cli_agent_json_outputs_are_machine_readable(tmp_path: Path) -> None:
     assert gate_result.exit_code == 0, gate_result.output
     gate_payload = json.loads(gate_result.output)
     assert gate_payload["verdict"] == "ALLOW"
+    assert gate_payload["repair_missions"] == []
     assert gate_payload["car"]["car_id"]
     assert car_path.exists()
 
@@ -163,6 +166,7 @@ def test_cli_agent_json_outputs_are_machine_readable(tmp_path: Path) -> None:
     assert explain_result.exit_code == 0, explain_result.output
     explain_payload = json.loads(explain_result.output)
     assert explain_payload["verdict"] == "ALLOW"
+    assert explain_payload["repair_missions"] == []
     assert explain_payload["verification"]["valid"] is True
 
 
